@@ -11,13 +11,12 @@ import (
 type Channel struct {
 	Name        string            `json:"name"`
 	URL         string            `json:"url"`
-	OriginalURL string            `json:"original_url"` // 新增
 	Group       string            `json:"group"`
 	Logo        string            `json:"logo"`
 	TVGId       string            `json:"tvg_id"`
 	TVGName     string            `json:"tvg_name"`
 	CatchupSrc  string            `json:"catchup_src"`
-	CatchupDays int               `json:"catchup_days"` // 新增
+	CatchupDays int               `json:"catchup_days"`
 	Extra       map[string]string `json:"extra"`
 }
 
@@ -81,7 +80,6 @@ func ParseM3U(content string) ([]Channel, error) {
 			ch := Channel{
 				Name:        currentName,
 				URL:         line,
-				OriginalURL: line,
 				Group:       currentAttrs["group-title"],
 				Logo:        currentAttrs["tvg-logo"],
 				TVGId:       currentAttrs["tvg-id"],

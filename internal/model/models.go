@@ -150,7 +150,6 @@ type ParsedChannel struct {
 	Group       string `json:"group"`
 	Logo        string `json:"logo"`
 	URL         string `json:"url"`
-	OriginalURL string `json:"original_url"` // Original URL before UDPxy conversion to determine igmp/multicast
 	CatchupURL  string `json:"catchup_url"`  // Original timeshift/catchup base URL
 	CatchupDays int    `json:"catchup_days"` // Days available for catchup
 }

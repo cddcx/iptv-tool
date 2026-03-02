@@ -109,7 +109,6 @@ func (c *Client) GetAllChannelList(ctx context.Context) ([]iptv.Channel, error) 
 			ID:          channelID,
 			Name:        channelName,
 			URL:         channelURLsRaw,
-			OriginalURL: channelURLsRaw, // 核心改动：把带有 igmp:// 等未拆分处理的内容原封不动传给下游，用来做组播判断
 			CatchupURL:  catchupURL,
 			CatchupDays: catchupDays, // 核心改动：时移天数通过提取运算赋值
 		})

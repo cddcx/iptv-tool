@@ -157,7 +157,6 @@ func (s *LiveSourceService) fetchIPTV(source model.LiveSource) ([]m3u.Channel, e
 		channels = append(channels, m3u.Channel{
 			Name:        ch.Name,
 			URL:         ch.URL,
-			OriginalURL: ch.OriginalURL, // Make sure iptv implementation supplies this!
 			TVGId:       ch.ID,
 			TVGName:     ch.Name,
 			CatchupSrc:  ch.CatchupURL,
@@ -246,7 +245,6 @@ func (s *LiveSourceService) saveParsedChannels(sourceID uint, channels []m3u.Cha
 			Group:       ch.Group,
 			Logo:        ch.Logo,
 			URL:         ch.URL,
-			OriginalURL: ch.OriginalURL,
 			CatchupURL:  ch.CatchupSrc,
 			CatchupDays: ch.CatchupDays,
 		})

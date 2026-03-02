@@ -19,13 +19,12 @@ type AggregatedChannel struct {
 	Name        string
 	Alias       string
 	URL         string
-	OriginalURL string // 新增：保存用于判定组播的原始URL
 	Group       string
 	Logo        string
 	TVGId       string
 	TVGName     string
 	CatchupSrc  string
-	CatchupDays int // 新增：回看天数
+	CatchupDays int // 回看天数
 }
 
 // DIYPProgram is a single EPG entry in the DIYP JSON format
@@ -286,19 +285,31 @@ func (e *Engine) AggregateLiveChannels(requestHost string) ([]AggregatedChannel,
 			Name:        ch.Name,
 			Alias:       alias,
 			URL:         e.extractBestURL(ch.URL, ch.CatchupURL),
-			OriginalURL: ch.OriginalURL, // 将原始URL传递过来
 			Group:       group,
 			Logo:        logo,
 			TVGId:       ch.TVGId,
 			TVGName:     ch.TVGName,
 			CatchupSrc:  ch.CatchupURL,
-			CatchupDays: ch.CatchupDays, // 传递天数
+			CatchupDays: ch.CatchupDays,
 		}
 
 		result = append(result, agg)
 	}
 
 	return result, nil
+}
+
+// isMulticastURL 判断给定的最终播放地址是否为组播类型
+// 包括: igmp://, rtp://, 以及通过 UDPXY 代理的组播地址
+func (e *Engine) isMulticastURL(url string) bool {
+	if strings.HasPrefix(url, "igmp://") || strings.HasPrefix(url, "rtp://") {
+		return true
+	}
+	// UDPXY 代理的组播地址形如 http://udpxy-host:port/rtp/239.x.x.x:1234
+	if e.iface.UDPxyURL != "" && strings.HasPrefix(url, strings.TrimRight(e.iface.UDPxyURL, "/")) {
+		return true
+	}
+	return false
 }
 
 func (e *Engine) extractBestURL(rawURLs, catchupURL string) string {
@@ -389,35 +400,27 @@ func (e *Engine) FormatM3U(channels []AggregatedChannel) string {
 		}
 		// ====== 核心功能：处理 Catchup 时移参数 ======
 		if templateParams != "" {
-			// 如果没提供 OriginalURL（比如外部 M3U 源），退化使用当前 URL 来判断是否为组播
-			chkURL := ch.OriginalURL
-			if chkURL == "" {
-				chkURL = ch.URL
-			}
-			isMulticast := strings.HasPrefix(chkURL, "igmp://")
-			// 规则 1：如果是组播源 或 自带原生 TimeShiftURL
-			if isMulticast || ch.CatchupSrc != "" {
+			isMulticast := e.isMulticastURL(ch.URL)
+			if ch.CatchupSrc != "" {
+				// 有专属的 TimeShiftURL（无论组播/单播），使用 default 模式
 				chCatchupSource := ch.CatchupSrc
-				// 如果解析出了专属的 TimeShiftURL，需要和模板拼接
-				if chCatchupSource != "" {
-					if strings.Contains(chCatchupSource, "?") {
-						chCatchupSource += "&" + templateParams
-					} else {
-						chCatchupSource += "?" + templateParams
-					}
-					sb.WriteString(fmt.Sprintf(` catchup="default" catchup-source="%s"`, chCatchupSource))
+				if strings.Contains(chCatchupSource, "?") {
+					chCatchupSource += "&" + templateParams
 				} else {
-					// 是组播但并没有提供 TimeShiftURL（通常不可能发生），则按标准挂在末尾
-					sb.WriteString(fmt.Sprintf(` catchup="append" catchup-source="?%s"`, templateParams))
+					chCatchupSource += "?" + templateParams
 				}
-			} else {
-				// 规则 2：单播源 (HTTP) 或其他普通源，直接使用 append 追加模板参数
+				sb.WriteString(fmt.Sprintf(` catchup="default" catchup-source="%s"`, chCatchupSource))
+				if ch.CatchupDays > 0 {
+					sb.WriteString(fmt.Sprintf(` catchup-days="%d"`, ch.CatchupDays))
+				}
+			} else if !isMulticast {
+				// 单播源且无专属 TimeShiftURL，使用 append 模式直接追加参数
 				sb.WriteString(fmt.Sprintf(` catchup="append" catchup-source="?%s"`, templateParams))
+				if ch.CatchupDays > 0 {
+					sb.WriteString(fmt.Sprintf(` catchup-days="%d"`, ch.CatchupDays))
+				}
 			}
-			// 如果源携带了合法的回看天数，直接附带 catchup-days
-			if ch.CatchupDays > 0 {
-				sb.WriteString(fmt.Sprintf(` catchup-days="%d"`, ch.CatchupDays))
-			}
+			// 组播源且无 TimeShiftURL → 不生成任何 catchup 参数
 		}
 		sb.WriteString(fmt.Sprintf(` group-title="%s",%s`, ch.Group, displayName))
 		sb.WriteString("\n")

@@ -51,7 +51,6 @@ type Channel struct {
 	ID          string
 	Name        string
 	URL         string
-	OriginalURL string
 	CatchupURL  string
 	CatchupDays int
 }
