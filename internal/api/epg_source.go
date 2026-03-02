@@ -62,13 +62,13 @@ func (ec *EPGSourceController) List(c *gin.Context) {
 func (ec *EPGSourceController) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
 	var source model.EPGSource
 	if err := model.DB.First(&source, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "epg source not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该EPG源"})
 		return
 	}
 	c.JSON(http.StatusOK, source)
@@ -96,7 +96,7 @@ func (ec *EPGSourceController) Create(c *gin.Context) {
 	}
 
 	if req.CronTime != "" && !task.ValidateCronTime(req.CronTime) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cron_time value"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时任务表达式"})
 		return
 	}
 
@@ -106,29 +106,29 @@ func (ec *EPGSourceController) Create(c *gin.Context) {
 	switch req.Type {
 	case model.EPGSourceTypeNetworkXMLTV:
 		if req.URL == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "url is required for network_xmltv type"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "网络XMLTV类型需要提供URL"})
 			return
 		}
 	case model.EPGSourceTypeIPTV:
 		if req.LiveSourceID == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "live_source_id is required for iptv type"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "IPTV类型需要提供直播源ID"})
 			return
 		}
 		// Verify the live source exists and is IPTV type
 		var liveSource model.LiveSource
 		if err := model.DB.First(&liveSource, *req.LiveSourceID).Error; err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "referenced live source not found"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "关联的直播源不存在"})
 			return
 		}
 		if liveSource.Type != model.LiveSourceTypeIPTV {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "referenced live source is not IPTV type"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "关联的直播源不是IPTV类型"})
 			return
 		}
 		// Check it's not already linked to another EPG source
 		var existingCount int64
 		model.DB.Model(&model.EPGSource{}).Where("live_source_id = ?", *req.LiveSourceID).Count(&existingCount)
 		if existingCount > 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "this IPTV live source is already linked to an EPG source"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "该IPTV直播源已关联其他EPG源"})
 			return
 		}
 		liveSourceID = req.LiveSourceID
@@ -196,13 +196,13 @@ type UpdateEPGSourceRequest struct {
 func (ec *EPGSourceController) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
 	var source model.EPGSource
 	if err := model.DB.First(&source, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "epg source not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该EPG源"})
 		return
 	}
 
@@ -244,7 +244,7 @@ func (ec *EPGSourceController) Update(c *gin.Context) {
 	}
 	if req.CronTime != nil {
 		if *req.CronTime != "" && !task.ValidateCronTime(*req.CronTime) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid cron_time value"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时任务表达式"})
 			return
 		}
 		updates["cron_time"] = *req.CronTime
@@ -272,7 +272,7 @@ func (ec *EPGSourceController) Update(c *gin.Context) {
 func (ec *EPGSourceController) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
@@ -309,7 +309,7 @@ func (ec *EPGSourceController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "epg source deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "EPG源已删除"})
 }
 
 // Trigger manually triggers a fetch for an EPG source
@@ -317,12 +317,12 @@ func (ec *EPGSourceController) Delete(c *gin.Context) {
 func (ec *EPGSourceController) Trigger(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
 	ec.scheduler.TriggerEPGSourceNow(uint(id))
-	c.JSON(http.StatusOK, gin.H{"message": "fetch triggered"})
+	c.JSON(http.StatusOK, gin.H{"message": "已触发抓取"})
 }
 
 // GetPrograms returns parsed EPG programs for an EPG source
@@ -331,7 +331,7 @@ func (ec *EPGSourceController) Trigger(c *gin.Context) {
 func (ec *EPGSourceController) GetPrograms(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
@@ -376,7 +376,7 @@ func (ec *EPGSourceController) GetPrograms(c *gin.Context) {
 func (ec *EPGSourceController) GetChannels(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
@@ -408,13 +408,13 @@ func (ec *EPGSourceController) GetChannels(c *gin.Context) {
 func (ec *EPGSourceController) GetDates(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
 	channelFilter := c.Query("channel")
 	if channelFilter == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "channel parameter is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少 channel 参数"})
 		return
 	}
 

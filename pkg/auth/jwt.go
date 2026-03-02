@@ -14,8 +14,8 @@ import (
 
 var (
 	jwtSecret       []byte
-	ErrNoToken      = errors.New("authorization token not provided")
-	ErrInvalidToken = errors.New("invalid or expired token")
+	ErrNoToken      = errors.New("未提供授权令牌")
+	ErrInvalidToken = errors.New("无效或已过期的令牌")
 )
 
 // Claims represents the JWT claims
@@ -90,7 +90,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		// Extract token from "Bearer <token>"
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "授权头格式无效"})
 			c.Abort()
 			return
 		}

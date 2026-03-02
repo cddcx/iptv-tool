@@ -40,7 +40,7 @@ func (lc *LogoController) List(c *gin.Context) {
 func (lc *LogoController) Upload(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择文件"})
 		return
 	}
 
@@ -48,7 +48,7 @@ func (lc *LogoController) Upload(c *gin.Context) {
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	allowedExts := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".svg": true, ".webp": true, ".ico": true}
 	if !allowedExts[ext] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported file type, allowed: png, jpg, jpeg, gif, svg, webp, ico"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的文件类型，仅支持: png, jpg, jpeg, gif, svg, webp, ico"})
 		return
 	}
 
@@ -68,7 +68,7 @@ func (lc *LogoController) Upload(c *gin.Context) {
 	urlPath := "/logo/" + fileName
 
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "文件保存失败: " + err.Error()})
 		return
 	}
 
@@ -92,13 +92,13 @@ func (lc *LogoController) Upload(c *gin.Context) {
 func (lc *LogoController) BatchUpload(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse form"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "表单解析失败"})
 		return
 	}
 
 	files := form.File["files"]
 	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no files provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "未提供任何文件"})
 		return
 	}
 
@@ -109,7 +109,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 	for _, file := range files {
 		ext := strings.ToLower(filepath.Ext(file.Filename))
 		if !allowedExts[ext] {
-			errors = append(errors, fmt.Sprintf("%s: unsupported file type", file.Filename))
+			errors = append(errors, fmt.Sprintf("%s: 不支持的文件类型", file.Filename))
 			continue
 		}
 
@@ -128,7 +128,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 		urlPath := "/logo/" + fileName
 
 		if err := c.SaveUploadedFile(file, filePath); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: save failed", file.Filename))
+			errors = append(errors, fmt.Sprintf("%s: 保存失败", file.Filename))
 			continue
 		}
 
@@ -139,7 +139,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 		}
 		if err := model.DB.Create(&logo).Error; err != nil {
 			os.Remove(filePath)
-			errors = append(errors, fmt.Sprintf("%s: db error", file.Filename))
+			errors = append(errors, fmt.Sprintf("%s: 数据库错误", file.Filename))
 			continue
 		}
 
@@ -200,13 +200,13 @@ func (lc *LogoController) Update(c *gin.Context) {
 func (lc *LogoController) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
 
 	var logo model.ChannelLogo
 	if err := model.DB.First(&logo, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "logo not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该台标"})
 		return
 	}
 
@@ -218,5 +218,5 @@ func (lc *LogoController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "logo deleted"})
+	c.JSON(http.StatusOK, gin.H{"message": "台标已删除"})
 }

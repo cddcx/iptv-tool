@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ErrUserExists      = errors.New("user already exists")
-	ErrInvalidPassword = errors.New("invalid username or password")
-	ErrSystemNotInit   = errors.New("system not initialized, please create admin account first")
+	ErrUserExists      = errors.New("用户已存在")
+	ErrInvalidPassword = errors.New("用户名或密码错误")
+	ErrSystemNotInit   = errors.New("系统未初始化，请先创建管理员账户")
 )
 
 // UserService handles user-related business logic
@@ -37,10 +37,10 @@ func (s *UserService) Register(username, password string) (*model.User, error) {
 	}
 
 	if len(username) < 3 {
-		return nil, fmt.Errorf("username must be at least 3 characters")
+		return nil, fmt.Errorf("用户名长度不能少于3个字符")
 	}
 	if len(password) < 6 {
-		return nil, fmt.Errorf("password must be at least 6 characters")
+		return nil, fmt.Errorf("密码长度不能少于6个字符")
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -87,15 +87,15 @@ func (s *UserService) Login(username, password string) (string, error) {
 func (s *UserService) ChangePassword(userID uint, oldPassword, newPassword string) error {
 	var user model.User
 	if err := model.DB.First(&user, userID).Error; err != nil {
-		return fmt.Errorf("user not found")
+		return fmt.Errorf("用户不存在")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
-		return fmt.Errorf("old password is incorrect")
+		return fmt.Errorf("旧密码不正确")
 	}
 
 	if len(newPassword) < 6 {
-		return fmt.Errorf("new password must be at least 6 characters")
+		return fmt.Errorf("新密码长度不能少于6个字符")
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)

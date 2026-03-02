@@ -57,7 +57,7 @@ func (sc *SystemController) Init(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":  "system initialized successfully",
+		"message":  "系统初始化成功",
 		"username": user.Username,
 	})
 }
@@ -114,7 +114,7 @@ func (sc *SystemController) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "密码修改成功"})
 }
 
 // CrackKeyRequest is the request body for cracking the 3DES key

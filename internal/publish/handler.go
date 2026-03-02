@@ -9,24 +9,24 @@ import (
 )
 
 // Handler serves published subscription endpoints
-// GET /sub/live/:path and GET /sub/epg/:path
+// GET /sub/live/:path
 func LiveHandler(c *gin.Context) {
 	path := c.Param("path")
 	if path == "" {
-		c.String(http.StatusNotFound, "not found")
+		c.String(http.StatusNotFound, "未找到")
 		return
 	}
 
 	// Look up the publish interface by path and type
 	var iface model.PublishInterface
 	if err := model.DB.Where("path = ? AND type = ? AND status = ?", path, "live", true).First(&iface).Error; err != nil {
-		c.String(http.StatusNotFound, "subscription not found")
+		c.String(http.StatusNotFound, "未找到该订阅接口")
 		return
 	}
 
 	engine, err := NewEngine(iface)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "failed to initialize publish engine: %s", err.Error())
+		c.String(http.StatusInternalServerError, "发布引擎初始化失败: %s", err.Error())
 		return
 	}
 
@@ -43,19 +43,19 @@ func LiveHandler(c *gin.Context) {
 func EPGHandler(c *gin.Context) {
 	path := c.Param("path")
 	if path == "" {
-		c.String(http.StatusNotFound, "not found")
+		c.String(http.StatusNotFound, "未找到")
 		return
 	}
 
 	var iface model.PublishInterface
 	if err := model.DB.Where("path = ? AND type = ? AND status = ?", path, "epg", true).First(&iface).Error; err != nil {
-		c.String(http.StatusNotFound, "subscription not found")
+		c.String(http.StatusNotFound, "未找到该订阅接口")
 		return
 	}
 
 	engine, err := NewEngine(iface)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "failed to initialize publish engine: %s", err.Error())
+		c.String(http.StatusInternalServerError, "发布引擎初始化失败: %s", err.Error())
 		return
 	}
 
@@ -71,7 +71,7 @@ func serveLive(c *gin.Context, engine *Engine, iface model.PublishInterface, req
 	// [修改点1]：在这里传入 requestHost
 	channels, err := engine.AggregateLiveChannels(requestHost)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "failed to aggregate channels: %s", err.Error())
+		c.String(http.StatusInternalServerError, "频道聚合失败: %s", err.Error())
 		return
 	}
 	switch iface.Format {
@@ -83,14 +83,14 @@ func serveLive(c *gin.Context, engine *Engine, iface model.PublishInterface, req
 		c.Header("Content-Type", "text/plain; charset=utf-8")
 		c.String(http.StatusOK, engine.FormatTXT(channels))
 	default:
-		c.String(http.StatusBadRequest, "unsupported format for live type")
+		c.String(http.StatusBadRequest, "直播类型不支持该格式")
 	}
 }
 
 func serveEPG(c *gin.Context, engine *Engine, iface model.PublishInterface, requestHost string) {
 	programs, err := engine.AggregateEPGPrograms()
 	if err != nil {
-		c.String(http.StatusInternalServerError, "failed to aggregate EPG: %s", err.Error())
+		c.String(http.StatusInternalServerError, "EPG聚合失败: %s", err.Error())
 		return
 	}
 
@@ -99,7 +99,7 @@ func serveEPG(c *gin.Context, engine *Engine, iface model.PublishInterface, requ
 		// Only use gzip when explicitly enabled in the interface settings
 		if iface.GzipEnabled {
 			if err := engine.FormatXMLTVGzip(programs, c.Writer); err != nil {
-				c.String(http.StatusInternalServerError, "gzip encoding failed")
+				c.String(http.StatusInternalServerError, "gzip 压缩失败")
 			}
 		} else {
 			c.Header("Content-Type", "application/xml; charset=utf-8")
@@ -112,6 +112,6 @@ func serveEPG(c *gin.Context, engine *Engine, iface model.PublishInterface, requ
 		c.Header("Content-Type", "application/json; charset=utf-8")
 		c.String(http.StatusOK, engine.FormatDIYP(programs, channelName, dateStr))
 	default:
-		c.String(http.StatusBadRequest, "unsupported format for epg type")
+		c.String(http.StatusBadRequest, "EPG类型不支持该格式")
 	}
 }

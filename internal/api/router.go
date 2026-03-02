@@ -101,7 +101,7 @@ func SetupRouter(scheduler *task.Scheduler, logoDir string, frontendFS fs.FS) *g
 
 		// Don't serve frontend for API or other backend routes
 		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/sub/") || strings.HasPrefix(path, "/logo/") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "未找到该资源"})
 			return
 		}
 

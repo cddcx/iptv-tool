@@ -90,13 +90,13 @@ func (s *LiveSourceService) ValidateNetworkURL(sourceURL string) (string, error)
 	case "txt":
 		channels, err = m3u.ParseTXT(content)
 	default:
-		return "", fmt.Errorf("content does not match M3U or TXT (DIYP) format")
+		return "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
 	}
 	if err != nil {
 		return "", fmt.Errorf("content parsing failed: %w", err)
 	}
 	if len(channels) == 0 {
-		return "", fmt.Errorf("no channels found in the content, please verify the URL")
+		return "", fmt.Errorf("未找到频道，请检查URL是否正确")
 	}
 
 	return format, nil
@@ -114,13 +114,13 @@ func (s *LiveSourceService) ValidateManualContent(content string) (string, error
 	case "txt":
 		channels, err = m3u.ParseTXT(content)
 	default:
-		return "", fmt.Errorf("content does not match M3U or TXT (DIYP) format")
+		return "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
 	}
 	if err != nil {
 		return "", fmt.Errorf("content parsing failed: %w", err)
 	}
 	if len(channels) == 0 {
-		return "", fmt.Errorf("no channels found in the content")
+		return "", fmt.Errorf("未找到频道")
 	}
 	return format, nil
 }
@@ -177,7 +177,7 @@ func createIPTVClient(config *iptv.Config) (iptv.Client, error) {
 	// case "zte":
 	//     return zte.NewClient(config), nil
 	default:
-		return nil, fmt.Errorf("unsupported IPTV platform: %s", config.Platform)
+		return nil, fmt.Errorf("不支持的IPTV平台: %s", config.Platform)
 	}
 }
 
@@ -225,7 +225,7 @@ func (s *LiveSourceService) parseManualContent(content string) ([]m3u.Channel, e
 	case "txt":
 		return m3u.ParseTXT(content)
 	default:
-		return nil, fmt.Errorf("unrecognized content format")
+		return nil, fmt.Errorf("无法识别的内容格式")
 	}
 }
 
@@ -239,14 +239,16 @@ func (s *LiveSourceService) saveParsedChannels(sourceID uint, channels []m3u.Cha
 	var records []model.ParsedChannel
 	for _, ch := range channels {
 		records = append(records, model.ParsedChannel{
-			SourceID:   sourceID,
-			TVGId:      ch.TVGId,
-			TVGName:    ch.TVGName,
-			Name:       ch.Name,
-			Group:      ch.Group,
-			Logo:       ch.Logo,
-			URL:        ch.URL,
-			CatchupURL: ch.CatchupSrc,
+			SourceID:    sourceID,
+			TVGId:       ch.TVGId,
+			TVGName:     ch.TVGName,
+			Name:        ch.Name,
+			Group:       ch.Group,
+			Logo:        ch.Logo,
+			URL:         ch.URL,
+			OriginalURL: ch.OriginalURL,
+			CatchupURL:  ch.CatchupSrc,
+			CatchupDays: ch.CatchupDays,
 		})
 	}
 
