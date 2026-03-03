@@ -27,8 +27,7 @@ func main() {
 
 	// Command-line flags
 	addr := flag.String("addr", ":8080", "HTTP listen address (e.g., :8080 or 0.0.0.0:9090)")
-	dataDirFlag := flag.String("data", "data", "Directory for SQLite database (relative to executable by default)")
-	logoDirFlag := flag.String("logos", "logos", "Directory for uploaded logo files (relative to executable by default)")
+	dataDirFlag := flag.String("data", "data", "Directory for data storage including db and logos (relative to executable by default)")
 	jwtSecret := flag.String("jwt-secret", "", "JWT secret (auto-generated if empty)")
 	flag.Parse()
 
@@ -38,17 +37,16 @@ func main() {
 		dataDir = filepath.Join(exeDir, dataDir)
 	}
 
-	logoDir := *logoDirFlag
-	if !filepath.IsAbs(logoDir) {
-		logoDir = filepath.Join(exeDir, logoDir)
-	}
+	// Define subdirectories
+	dbDir := filepath.Join(dataDir, "db")
+	logoDir := filepath.Join(dataDir, "logos")
 
 	// Ensure directories exist
-	os.MkdirAll(dataDir, 0755)
+	os.MkdirAll(dbDir, 0755)
 	os.MkdirAll(logoDir, 0755)
 
 	// Initialize database
-	dbPath := filepath.Join(dataDir, "iptv.db")
+	dbPath := filepath.Join(dbDir, "iptv.db")
 	if err := model.InitDB(dbPath); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
