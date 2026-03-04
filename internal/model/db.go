@@ -1,7 +1,7 @@
 package model
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -31,6 +31,6 @@ func InitDB(dsn string) error {
 		return err
 	}
 
-	log.Println("Database initialized and migrated successfully.")
+	slog.Info("Database initialized and migrated successfully.")
 	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -69,7 +69,7 @@ func (s *LiveSourceService) FetchAndUpdate(sourceID uint) error {
 		"last_error":      "",
 	})
 
-	log.Printf("Live source '%s' (ID: %d) fetched successfully, %d channels found.", source.Name, source.ID, len(channels))
+	slog.Info("Live source fetched successfully", "name", source.Name, "id", source.ID, "channels", len(channels))
 	return nil
 }
 

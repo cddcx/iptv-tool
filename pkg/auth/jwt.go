@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -82,6 +83,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			slog.Warn("Unauthorized access attempt: No token", "client_ip", c.ClientIP(), "path", c.Request.URL.Path)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": ErrNoToken.Error()})
 			c.Abort()
 			return
@@ -90,6 +92,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		// Extract token from "Bearer <token>"
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			slog.Warn("Unauthorized access attempt: Invalid auth header format", "client_ip", c.ClientIP(), "path", c.Request.URL.Path)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "授权头格式无效"})
 			c.Abort()
 			return
@@ -97,6 +100,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		claims, err := ParseToken(parts[1])
 		if err != nil {
+			slog.Warn("Unauthorized access attempt: Invalid token", "error", err, "client_ip", c.ClientIP(), "path", c.Request.URL.Path)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			c.Abort()
 			return

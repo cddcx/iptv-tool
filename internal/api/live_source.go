@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,6 +34,7 @@ func NewLiveSourceController(scheduler *task.Scheduler) *LiveSourceController {
 func (lc *LiveSourceController) List(c *gin.Context) {
 	var sources []model.LiveSource
 	if err := model.DB.Order("id desc").Find(&sources).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -152,6 +154,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 	}
 
 	if err := model.DB.Create(&source).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -267,6 +270,7 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 	}
 
 	if err := model.DB.Model(&source).Updates(updates).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -359,6 +363,7 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 
 	// Delete the live source itself
 	if err := model.DB.Delete(&model.LiveSource{}, sourceID).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -390,6 +395,7 @@ func (lc *LiveSourceController) GetChannels(c *gin.Context) {
 
 	var channels []model.ParsedChannel
 	if err := model.DB.Where("source_id = ?", uint(id)).Find(&channels).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -408,6 +414,7 @@ func (lc *LiveSourceController) UnlinkedIPTV(c *gin.Context) {
 		model.LiveSourceTypeIPTV,
 		model.DB.Model(&model.EPGSource{}).Select("live_source_id").Where("live_source_id IS NOT NULL"),
 	).Find(&sources).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"iptv-tool-v2/internal/iptv"
@@ -73,6 +74,7 @@ func (c *Client) autoDetectEPGStrategy(ctx context.Context, channels []iptv.Chan
 				continue
 			}
 			// It's a network error or parsing error for a *valid* endpoint
+			slog.Error("IPTV EPG: Strategy failed during auto-detect", "strategy", strategy.Name(), "error", err, "host", c.config.ServerHost)
 			return nil, fmt.Errorf("strategy %s failed: %w", strategy.Name(), err)
 		}
 

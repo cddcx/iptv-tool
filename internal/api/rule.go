@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,6 +22,7 @@ func NewRuleController() *RuleController {
 func (rc *RuleController) List(c *gin.Context) {
 	var rules []model.AggregationRule
 	if err := model.DB.Order("id desc").Find(&rules).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -73,6 +75,7 @@ func (rc *RuleController) Create(c *gin.Context) {
 	}
 
 	if err := model.DB.Create(&rule).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -129,6 +132,7 @@ func (rc *RuleController) Update(c *gin.Context) {
 
 	if len(updates) > 0 {
 		if err := model.DB.Model(&rule).Updates(updates).Error; err != nil {
+			slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -164,6 +168,7 @@ func (rc *RuleController) Delete(c *gin.Context) {
 	}
 
 	if err := model.DB.Delete(&model.AggregationRule{}, uint(id)).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

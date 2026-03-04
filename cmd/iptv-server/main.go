@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -11,6 +11,7 @@ import (
 	"iptv-tool-v2/internal/model"
 	"iptv-tool-v2/internal/task"
 	"iptv-tool-v2/pkg/auth"
+	"iptv-tool-v2/pkg/logger"
 	"iptv-tool-v2/web"
 
 	// Import huawei package to trigger init() registration of all EPG strategies
@@ -21,13 +22,15 @@ func main() {
 	// Get the absolute path of the executable directory
 	exePath, err := os.Executable()
 	if err != nil {
-		log.Fatalf("Failed to get executable path: %v", err)
+		slog.Error("Failed to get executable path", "error", err)
+		os.Exit(1)
 	}
 	exeDir := filepath.Dir(exePath)
 
 	// Command-line flags
 	addr := flag.String("addr", ":8080", "HTTP listen address (e.g., :8080 or 0.0.0.0:9090)")
 	dataDirFlag := flag.String("data", "data", "Directory for data storage including db and logos (relative to executable by default)")
+	logDirFlag := flag.String("log-dir", "logs", "Directory for log files (relative to executable by default)")
 	jwtSecret := flag.String("jwt-secret", "", "JWT secret (auto-generated if empty)")
 	flag.Parse()
 
@@ -35,6 +38,17 @@ func main() {
 	dataDir := *dataDirFlag
 	if !filepath.IsAbs(dataDir) {
 		dataDir = filepath.Join(exeDir, dataDir)
+	}
+	logDir := *logDirFlag
+	if !filepath.IsAbs(logDir) {
+		logDir = filepath.Join(exeDir, logDir)
+	}
+
+	// Initialize logger early
+	if err := logger.InitLogger(logDir); err != nil {
+		// Fallback to basic logging if logger init fails
+		slog.Error("Failed to initialize logger", "error", err)
+		os.Exit(1)
 	}
 
 	// Define subdirectories
@@ -48,7 +62,7 @@ func main() {
 	// Initialize database
 	dbPath := filepath.Join(dbDir, "iptv.db")
 	if err := model.InitDB(dbPath); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		logger.Fatalf("Failed to initialize database", "error", err)
 	}
 
 	// Initialize JWT
@@ -57,21 +71,21 @@ func main() {
 	// Initialize and start scheduler
 	scheduler := task.NewScheduler()
 	if err := scheduler.Start(); err != nil {
-		log.Fatalf("Failed to start scheduler: %v", err)
+		logger.Fatalf("Failed to start scheduler", "error", err)
 	}
 	defer scheduler.Stop()
 
 	// Prepare embedded frontend filesystem
 	frontendFS, err := fs.Sub(web.StaticFS, "dist")
 	if err != nil {
-		log.Fatalf("Failed to load embedded frontend: %v", err)
+		logger.Fatalf("Failed to load embedded frontend", "error", err)
 	}
 
 	// Setup and start HTTP server
 	router := api.SetupRouter(scheduler, logoDir, frontendFS)
 
-	log.Printf("IPTV Tool v2 starting on %s", *addr)
+	slog.Info("IPTV Tool v2 starting", "address", *addr)
 	if err := router.Run(*addr); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Fatalf("Failed to start server", "error", err)
 	}
 }

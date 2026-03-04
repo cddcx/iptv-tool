@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -63,7 +63,7 @@ func (s *EPGSourceService) FetchAndUpdate(sourceID uint) error {
 		"last_error":      "",
 	})
 
-	log.Printf("EPG source '%s' (ID: %d) fetched successfully, %d programs found.", source.Name, source.ID, len(programs))
+	slog.Info("EPG source fetched successfully", "name", source.Name, "id", source.ID, "programs", len(programs))
 	return nil
 }
 

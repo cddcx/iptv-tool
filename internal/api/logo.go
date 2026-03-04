@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -29,6 +30,7 @@ func NewLogoController(logoDir string) *LogoController {
 func (lc *LogoController) List(c *gin.Context) {
 	var logos []model.ChannelLogo
 	if err := model.DB.Order("id desc").Find(&logos).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -80,6 +82,7 @@ func (lc *LogoController) Upload(c *gin.Context) {
 
 	if err := model.DB.Create(&logo).Error; err != nil {
 		os.Remove(filePath) // Clean up file on DB error
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -188,6 +191,7 @@ func (lc *LogoController) Update(c *gin.Context) {
 
 	logo.Name = req.Name
 	if err := model.DB.Save(&logo).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -214,6 +218,7 @@ func (lc *LogoController) Delete(c *gin.Context) {
 	os.Remove(logo.FilePath)
 
 	if err := model.DB.Delete(&logo).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

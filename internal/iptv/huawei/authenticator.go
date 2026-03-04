@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"net"
 	"net/http"
@@ -47,18 +48,21 @@ func (c *Client) Authenticate(ctx context.Context) error {
 	// Step 1: Visit AuthenticationURL to get redirect and host
 	referer, err := c.authenticationURL(ctx, true)
 	if err != nil {
+		slog.Error("IPTV Auth: Step 1 failed", "error", err, "host", c.config.ServerHost)
 		return fmt.Errorf("step 1 (AuthenticationURL) failed: %w", err)
 	}
 
 	// Step 2: Access authLoginHWxxx.jsp to get EncryptToken
 	encryptToken, err := c.authLoginHW(ctx, referer)
 	if err != nil {
+		slog.Error("IPTV Auth: Step 2 failed", "error", err, "host", c.host)
 		return fmt.Errorf("step 2 (authLogin) failed: %w", err)
 	}
 
 	// Step 3: Use 3DES to encrypt data and get JSESSIONID & UserToken
 	token, err := c.validAuthenticationHW(ctx, encryptToken)
 	if err != nil {
+		slog.Error("IPTV Auth: Step 3 failed", "error", err, "host", c.host)
 		return fmt.Errorf("step 3 (validAuthentication) failed: %w", err)
 	}
 

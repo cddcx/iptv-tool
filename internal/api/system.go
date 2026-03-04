@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -80,6 +81,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 	// ① IP 频率限制
 	clientIP := c.ClientIP()
 	if !globalRateLimiter.Allow(clientIP) {
+		slog.Warn("Login rate limit exceeded", "client_ip", clientIP)
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"error": "登录尝试过于频繁，请稍后再试",
 		})
@@ -96,6 +98,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 	// ③ 检查是否需要验证码（连续失败 >= 3 次）
 	if globalAttemptTracker.NeedCaptcha(req.Username) {
 		if req.CaptchaID == "" || req.CaptchaCode == "" {
+			slog.Warn("Captcha required due to multiple failed attempts", "username", req.Username, "client_ip", clientIP)
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":            "请完成验证码校验",
 				"captcha_required": true,
@@ -104,6 +107,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 		}
 		// 校验验证码（Verify 会自动删除已使用的验证码，防止重放）
 		if !captchaStore.Verify(req.CaptchaID, req.CaptchaCode, true) {
+			slog.Warn("Invalid captcha attempt", "username", req.Username, "client_ip", clientIP)
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":            "验证码错误",
 				"captcha_required": true,
@@ -125,6 +129,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 		globalAttemptTracker.RecordFailure(req.Username)
 		needCaptcha := globalAttemptTracker.NeedCaptcha(req.Username)
 
+		slog.Warn("Login failed: invalid credentials", "username", req.Username, "client_ip", clientIP, "need_captcha", needCaptcha)
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":            "用户名或密码错误",
 			"captcha_required": needCaptcha,
@@ -134,6 +139,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 
 	// ⑤ 登录成功：重置失败计数
 	globalAttemptTracker.Reset(req.Username)
+	slog.Info("User logged in successfully", "username", req.Username, "client_ip", clientIP)
 
 	c.JSON(http.StatusOK, gin.H{
 		"token": token,

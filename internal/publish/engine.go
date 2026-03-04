@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -242,6 +243,7 @@ func (e *Engine) AggregateLiveChannels(requestHost string) ([]AggregatedChannel,
 	// Filter out disabled live sources
 	var activeSourceIDs []uint
 	if err := model.DB.Model(&model.LiveSource{}).Where("id IN ? AND status = ?", sourceIDs, true).Pluck("id", &activeSourceIDs).Error; err != nil {
+		slog.Error("Publish Engine: Failed to filter active sources", "error", err, "iface_id", e.iface.ID)
 		return nil, fmt.Errorf("failed to filter active sources: %w", err)
 	}
 
@@ -251,6 +253,7 @@ func (e *Engine) AggregateLiveChannels(requestHost string) ([]AggregatedChannel,
 
 	var parsedChannels []model.ParsedChannel
 	if err := model.DB.Where("source_id IN ?", activeSourceIDs).Find(&parsedChannels).Error; err != nil {
+		slog.Error("Publish Engine: Failed to load channels", "error", err, "iface_id", e.iface.ID)
 		return nil, fmt.Errorf("failed to load channels: %w", err)
 	}
 
@@ -473,6 +476,7 @@ func (e *Engine) AggregateEPGPrograms() ([]AggregatedEPGProgram, error) {
 	// Filter out disabled EPG sources
 	var activeSourceIDs []uint
 	if err := model.DB.Model(&model.EPGSource{}).Where("id IN ? AND status = ?", sourceIDs, true).Pluck("id", &activeSourceIDs).Error; err != nil {
+		slog.Error("Publish Engine: Failed to filter active EPG sources", "error", err, "iface_id", e.iface.ID)
 		return nil, fmt.Errorf("failed to filter active EPG sources: %w", err)
 	}
 
@@ -489,6 +493,7 @@ func (e *Engine) AggregateEPGPrograms() ([]AggregatedEPGProgram, error) {
 
 	var programs []model.ParsedEPG
 	if err := query.Order("channel, start_time").Find(&programs).Error; err != nil {
+		slog.Error("Publish Engine: Failed to load EPG programs", "error", err, "iface_id", e.iface.ID)
 		return nil, fmt.Errorf("failed to load EPG programs: %w", err)
 	}
 

@@ -2,7 +2,7 @@ package task
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/robfig/cron/v3"
@@ -56,7 +56,7 @@ func NewScheduler() *Scheduler {
 
 // Start initializes and starts all scheduled tasks from the database
 func (s *Scheduler) Start() error {
-	log.Println("Initializing task scheduler...")
+	slog.Info("Initializing task scheduler...")
 
 	// Load all enabled live sources and register their cron jobs
 	var liveSources []model.LiveSource
@@ -73,7 +73,7 @@ func (s *Scheduler) Start() error {
 			continue
 		}
 		if err := s.AddLiveSourceTask(src.ID, src.CronTime); err != nil {
-			log.Printf("Warning: failed to schedule live source '%s' (ID: %d): %v", src.Name, src.ID, err)
+			slog.Warn("Failed to schedule live source", "name", src.Name, "id", src.ID, "error", err)
 		}
 	}
 
@@ -88,13 +88,12 @@ func (s *Scheduler) Start() error {
 			continue
 		}
 		if err := s.AddEPGSourceTask(src.ID, src.CronTime); err != nil {
-			log.Printf("Warning: failed to schedule EPG source '%s' (ID: %d): %v", src.Name, src.ID, err)
+			slog.Warn("Failed to schedule EPG source", "name", src.Name, "id", src.ID, "error", err)
 		}
 	}
 
 	s.cron.Start()
-	log.Printf("Task scheduler started: %d live source tasks, %d EPG source tasks.",
-		len(s.liveEntries), len(s.epgEntries))
+	slog.Info("Task scheduler started", "live_tasks", len(s.liveEntries), "epg_tasks", len(s.epgEntries))
 	return nil
 }
 
@@ -102,7 +101,7 @@ func (s *Scheduler) Start() error {
 func (s *Scheduler) Stop() {
 	ctx := s.cron.Stop()
 	<-ctx.Done()
-	log.Println("Task scheduler stopped.")
+	slog.Info("Task scheduler stopped.")
 }
 
 // AddLiveSourceTask adds or updates a cron job for a live source
@@ -123,9 +122,9 @@ func (s *Scheduler) AddLiveSourceTask(sourceID uint, cronTime string) error {
 
 	id := sourceID // Capture for closure
 	entryID, err := s.cron.AddFunc(cronExpr, func() {
-		log.Printf("Cron: fetching live source ID: %d", id)
+		slog.Info("Cron: fetching live source", "id", id)
 		if err := s.liveService.FetchAndUpdate(id); err != nil {
-			log.Printf("Cron: failed to fetch live source ID %d: %v", id, err)
+			slog.Error("Cron: failed to fetch live source", "id", id, "error", err)
 		}
 	})
 	if err != nil {
@@ -133,7 +132,7 @@ func (s *Scheduler) AddLiveSourceTask(sourceID uint, cronTime string) error {
 	}
 
 	s.liveEntries[sourceID] = entryID
-	log.Printf("Scheduled live source task: ID=%d, interval=%s, cron=%s", sourceID, cronTime, cronExpr)
+	slog.Info("Scheduled live source task", "id", sourceID, "interval", cronTime, "cron", cronExpr)
 	return nil
 }
 
@@ -145,7 +144,7 @@ func (s *Scheduler) RemoveLiveSourceTask(sourceID uint) {
 	if entryID, exists := s.liveEntries[sourceID]; exists {
 		s.cron.Remove(entryID)
 		delete(s.liveEntries, sourceID)
-		log.Printf("Removed live source task: ID=%d", sourceID)
+		slog.Info("Removed live source task", "id", sourceID)
 	}
 }
 
@@ -167,9 +166,9 @@ func (s *Scheduler) AddEPGSourceTask(sourceID uint, cronTime string) error {
 
 	id := sourceID // Capture for closure
 	entryID, err := s.cron.AddFunc(cronExpr, func() {
-		log.Printf("Cron: fetching EPG source ID: %d", id)
+		slog.Info("Cron: fetching EPG source", "id", id)
 		if err := s.epgService.FetchAndUpdate(id); err != nil {
-			log.Printf("Cron: failed to fetch EPG source ID %d: %v", id, err)
+			slog.Error("Cron: failed to fetch EPG source", "id", id, "error", err)
 		}
 	})
 	if err != nil {
@@ -177,7 +176,7 @@ func (s *Scheduler) AddEPGSourceTask(sourceID uint, cronTime string) error {
 	}
 
 	s.epgEntries[sourceID] = entryID
-	log.Printf("Scheduled EPG source task: ID=%d, interval=%s, cron=%s", sourceID, cronTime, cronExpr)
+	slog.Info("Scheduled EPG source task", "id", sourceID, "interval", cronTime, "cron", cronExpr)
 	return nil
 }
 
@@ -189,16 +188,16 @@ func (s *Scheduler) RemoveEPGSourceTask(sourceID uint) {
 	if entryID, exists := s.epgEntries[sourceID]; exists {
 		s.cron.Remove(entryID)
 		delete(s.epgEntries, sourceID)
-		log.Printf("Removed EPG source task: ID=%d", sourceID)
+		slog.Info("Removed EPG source task", "id", sourceID)
 	}
 }
 
 // TriggerLiveSourceNow manually triggers a live source fetch immediately (for first-time add / manual refresh)
 func (s *Scheduler) TriggerLiveSourceNow(sourceID uint) {
 	go func() {
-		log.Printf("Manual trigger: fetching live source ID: %d", sourceID)
+		slog.Info("Manual trigger: fetching live source", "id", sourceID)
 		if err := s.liveService.FetchAndUpdate(sourceID); err != nil {
-			log.Printf("Manual trigger: failed to fetch live source ID %d: %v", sourceID, err)
+			slog.Error("Manual trigger: failed to fetch live source", "id", sourceID, "error", err)
 		}
 	}()
 }
@@ -206,9 +205,9 @@ func (s *Scheduler) TriggerLiveSourceNow(sourceID uint) {
 // TriggerEPGSourceNow manually triggers an EPG source fetch immediately
 func (s *Scheduler) TriggerEPGSourceNow(sourceID uint) {
 	go func() {
-		log.Printf("Manual trigger: fetching EPG source ID: %d", sourceID)
+		slog.Info("Manual trigger: fetching EPG source", "id", sourceID)
 		if err := s.epgService.FetchAndUpdate(sourceID); err != nil {
-			log.Printf("Manual trigger: failed to fetch EPG source ID %d: %v", sourceID, err)
+			slog.Error("Manual trigger: failed to fetch EPG source", "id", sourceID, "error", err)
 		}
 	}()
 }

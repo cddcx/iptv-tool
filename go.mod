@@ -9,6 +9,7 @@ require (
 	github.com/mojocn/base64Captcha v1.3.8
 	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/crypto v0.48.0
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/gorm v1.31.1
 )
 
@@ -45,7 +46,7 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	golang.org/x/arch v0.24.0 // indirect
-	golang.org/x/image v0.23.0 // indirect
+	golang.org/x/image v0.36.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect

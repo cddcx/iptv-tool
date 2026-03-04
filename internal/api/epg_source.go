@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ func NewEPGSourceController(scheduler *task.Scheduler) *EPGSourceController {
 func (ec *EPGSourceController) List(c *gin.Context) {
 	var sources []model.EPGSource
 	if err := model.DB.Order("id desc").Find(&sources).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -165,6 +167,7 @@ func (ec *EPGSourceController) Create(c *gin.Context) {
 	}
 
 	if err := model.DB.Create(&source).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -251,6 +254,7 @@ func (ec *EPGSourceController) Update(c *gin.Context) {
 	}
 
 	if err := model.DB.Model(&source).Updates(updates).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -305,6 +309,7 @@ func (ec *EPGSourceController) Delete(c *gin.Context) {
 	model.DB.Where("source_id = ?", sourceID).Delete(&model.ParsedEPG{})
 
 	if err := model.DB.Delete(&model.EPGSource{}, sourceID).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -350,6 +355,7 @@ func (ec *EPGSourceController) GetPrograms(c *gin.Context) {
 
 	var programs []model.ParsedEPG
 	if err := query.Order("start_time asc").Limit(1000).Find(&programs).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -393,6 +399,7 @@ func (ec *EPGSourceController) GetChannels(c *gin.Context) {
 		Group("channel").
 		Order("channel asc").
 		Find(&channels).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -430,6 +437,7 @@ func (ec *EPGSourceController) GetDates(c *gin.Context) {
 		Group("DATE(start_time)").
 		Order("date asc").
 		Find(&dates).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -25,6 +26,7 @@ func NewPublishController(scheduler *task.Scheduler) *PublishController {
 func (pc *PublishController) ListInterfaces(c *gin.Context) {
 	var interfaces []model.PublishInterface
 	if err := model.DB.Order("id desc").Find(&interfaces).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -119,6 +121,7 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 	}
 
 	if err := model.DB.Create(&iface).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -226,6 +229,7 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 
 	if len(updates) > 0 {
 		if err := model.DB.Model(&iface).Updates(updates).Error; err != nil {
+			slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -245,6 +249,7 @@ func (pc *PublishController) DeleteInterface(c *gin.Context) {
 	}
 
 	if err := model.DB.Delete(&model.PublishInterface{}, uint(id)).Error; err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -289,6 +294,7 @@ func (pc *PublishController) PreviewInterface(c *gin.Context) {
 
 	eng, err := publish.NewEngine(dummyIface)
 	if err != nil {
+		slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -301,6 +307,7 @@ func (pc *PublishController) PreviewInterface(c *gin.Context) {
 	if req.Type == "live" {
 		channels, err := eng.AggregateLiveChannels(requestHost)
 		if err != nil {
+			slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -308,6 +315,7 @@ func (pc *PublishController) PreviewInterface(c *gin.Context) {
 	} else {
 		epgs, err := eng.AggregateEPGPrograms()
 		if err != nil {
+			slog.Error("Internal server error", "error", err, "path", c.Request.URL.Path)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
