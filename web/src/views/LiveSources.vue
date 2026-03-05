@@ -31,7 +31,11 @@
       </el-table-column>
       <el-table-column label="更新时间" width="200">
         <template #default="{ row }">
-          <div v-if="row.last_fetched_at" style="display: flex; align-items: center; gap: 6px">
+          <div v-if="row.is_syncing" style="display: flex; align-items: center; gap: 6px; color: #409eff">
+            <el-icon class="is-loading" :size="16"><Loading /></el-icon>
+            <span>同步中...</span>
+          </div>
+          <div v-else-if="row.last_fetched_at" style="display: flex; align-items: center; gap: 6px">
             <el-tooltip v-if="row.last_error" :content="row.last_error" placement="top" :show-after="300">
               <el-icon color="#f56c6c" :size="16" style="cursor: pointer; flex-shrink: 0"><CircleCloseFilled /></el-icon>
             </el-tooltip>
@@ -223,13 +227,19 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { List, Refresh, Edit, Delete, Plus, SuccessFilled, CircleCloseFilled } from '@element-plus/icons-vue'
+import { List, Refresh, Edit, Delete, Plus, SuccessFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
 import api from '../api'
 
 const sources = ref([])
 const loading = ref(false)
+let pollingTimer = null
+
+onUnmounted(() => {
+  if (pollingTimer) clearInterval(pollingTimer)
+})
+
 const dialogVisible = ref(false)
 const channelsVisible = ref(false)
 const channels = ref([])
@@ -323,12 +333,21 @@ onMounted(async () => {
   } catch {}
 })
 
-async function loadSources() {
-  loading.value = true
+async function loadSources(showLoading = true) {
+  if (showLoading) loading.value = true
   try {
     const { data } = await api.get('/live-sources')
     sources.value = data
-  } finally { loading.value = false }
+    
+    // Check polling
+    const hasSyncing = sources.value.some(s => s.is_syncing)
+    if (hasSyncing && !pollingTimer) {
+      pollingTimer = setInterval(() => loadSources(false), 3000)
+    } else if (!hasSyncing && pollingTimer) {
+      clearInterval(pollingTimer)
+      pollingTimer = null
+    }
+  } finally { if (showLoading) loading.value = false }
 }
 
 function onTypeChange() {
@@ -483,6 +502,7 @@ async function handleDelete(row) {
 async function triggerFetch(row) {
   await api.post(`/live-sources/${row.id}/trigger`)
   ElMessage.success('已触发刷新')
+  await loadSources(false)
 }
 
 async function showChannels(row) {

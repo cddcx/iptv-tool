@@ -150,6 +150,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		Content:     req.Content,
 		CronTime:    req.CronTime,
 		Status:      true,
+		IsSyncing:   true,
 		IPTVConfig:  string(req.IPTVConfig),
 	}
 
@@ -168,6 +169,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 			LiveSourceID: &source.ID,
 			CronTime:     req.CronTime,
 			Status:       true,
+			IsSyncing:    true,
 			IPTVConfig:   string(req.IPTVConfig),
 		}
 		if err := model.DB.Create(&epgSource).Error; err == nil {
@@ -379,6 +381,8 @@ func (lc *LiveSourceController) Trigger(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
+
+	model.DB.Model(&model.LiveSource{}).Where("id = ?", uint(id)).Update("is_syncing", true)
 
 	lc.scheduler.TriggerLiveSourceNow(uint(id))
 	c.JSON(http.StatusOK, gin.H{"message": "已触发抓取"})

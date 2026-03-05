@@ -32,6 +32,7 @@ type LiveSource struct {
 	Content       string         `json:"content"`              // For network_manual
 	CronTime      string         `json:"cron_time"`            // 1h, 2h, 4h, 6h, 12h, 24h
 	Status        bool           `gorm:"default:true" json:"status"`
+	IsSyncing     bool           `gorm:"default:false" json:"is_syncing"`
 	IPTVConfig    string         `gorm:"column:iptv_config" json:"iptv_config"` // JSON string for IPTV specific configs (platform, credentials)
 	LastFetchedAt *time.Time     `json:"last_fetched_at"`
 	LastError     string         `json:"last_error"`
@@ -57,6 +58,7 @@ type EPGSource struct {
 	LiveSourceID  *uint         `gorm:"index" json:"live_source_id"` // FK to LiveSource (only for IPTV type, auto-created)
 	CronTime      string        `json:"cron_time"`
 	Status        bool          `gorm:"default:true" json:"status"`
+	IsSyncing     bool          `gorm:"default:false" json:"is_syncing"`
 	IPTVConfig    string        `gorm:"column:iptv_config" json:"iptv_config"` // JSON string for IPTV specific EPG configs (strategy: auto, vsp, etc.)
 	LastFetchedAt *time.Time    `json:"last_fetched_at"`
 	LastError     string        `json:"last_error"`

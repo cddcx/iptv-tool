@@ -31,6 +31,14 @@ func (s *EPGSourceService) FetchAndUpdate(sourceID uint) error {
 		return nil // Source is disabled, skip
 	}
 
+	// Mark as syncing in case this was triggered by a cron job
+	model.DB.Model(&source).Update("is_syncing", true)
+
+	defer func() {
+		// Defensive cleanup
+		model.DB.Model(&model.EPGSource{}).Where("id = ?", sourceID).Update("is_syncing", false)
+	}()
+
 	var programs []epgpkg.Program
 	var fetchErr error
 

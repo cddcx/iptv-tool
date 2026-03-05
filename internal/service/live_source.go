@@ -34,6 +34,14 @@ func (s *LiveSourceService) FetchAndUpdate(sourceID uint) error {
 		return nil // Source is disabled, skip
 	}
 
+	// Mark as syncing in case this was triggered by a cron job
+	model.DB.Model(&source).Update("is_syncing", true)
+
+	defer func() {
+		// Defensive cleanup
+		model.DB.Model(&model.LiveSource{}).Where("id = ?", sourceID).Update("is_syncing", false)
+	}()
+
 	var channels []m3u.Channel
 	var fetchErr error
 

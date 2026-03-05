@@ -163,6 +163,7 @@ func (ec *EPGSourceController) Create(c *gin.Context) {
 		CronTime:     req.CronTime,
 		LiveSourceID: liveSourceID,
 		Status:       true,
+		IsSyncing:    true,
 		IPTVConfig:   iptvConfigStr,
 	}
 
@@ -325,6 +326,8 @@ func (ec *EPGSourceController) Trigger(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
 		return
 	}
+
+	model.DB.Model(&model.EPGSource{}).Where("id = ?", uint(id)).Update("is_syncing", true)
 
 	ec.scheduler.TriggerEPGSourceNow(uint(id))
 	c.JSON(http.StatusOK, gin.H{"message": "已触发抓取"})

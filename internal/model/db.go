@@ -31,6 +31,10 @@ func InitDB(dsn string) error {
 		return err
 	}
 
+	// Defensive reset: set is_syncing to false for all sources on startup
+	DB.Model(&LiveSource{}).Where("is_syncing = ?", true).Update("is_syncing", false)
+	DB.Model(&EPGSource{}).Where("is_syncing = ?", true).Update("is_syncing", false)
+
 	slog.Info("Database initialized and migrated successfully.")
 	return nil
 }
