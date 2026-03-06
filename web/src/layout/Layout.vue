@@ -36,10 +36,20 @@
           <el-icon><Share /></el-icon>
           <template #title>聚合发布</template>
         </el-menu-item>
-        <el-menu-item index="/settings">
-          <el-icon><Setting /></el-icon>
-          <template #title>系统设置</template>
-        </el-menu-item>
+        <el-sub-menu index="/settings">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>系统设置</span>
+          </template>
+          <el-menu-item index="/settings/password">
+            <el-icon><Lock /></el-icon>
+            <template #title>修改密码</template>
+          </el-menu-item>
+          <el-menu-item index="/settings/about">
+            <el-icon><InfoFilled /></el-icon>
+            <template #title>关于系统</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
       <div class="collapse-btn" @click="isCollapsed = !isCollapsed">
         <el-icon :size="18">
@@ -87,7 +97,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
+import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown, Lock, InfoFilled } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()

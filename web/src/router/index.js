@@ -44,9 +44,14 @@ const routes = [
         component: () => import('../views/Publish.vue'),
       },
       {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('../views/Settings.vue'),
+        path: 'settings/password',
+        name: 'SettingsPassword',
+        component: () => import('../views/SettingsPassword.vue'),
+      },
+      {
+        path: 'settings/about',
+        name: 'SettingsAbout',
+        component: () => import('../views/SettingsAbout.vue'),
       },
     ],
   },
