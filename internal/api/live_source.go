@@ -44,7 +44,7 @@ func (lc *LiveSourceController) List(c *gin.Context) {
 		ChannelCount int64 `json:"channel_count"`
 	}
 
-	var result []LiveSourceWithCount
+	result := make([]LiveSourceWithCount, 0)
 	for _, s := range sources {
 		var channelCount int64
 		model.DB.Model(&model.ParsedChannel{}).Where("source_id = ?", s.ID).Count(&channelCount)

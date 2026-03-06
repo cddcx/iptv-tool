@@ -42,7 +42,7 @@ func (ec *EPGSourceController) List(c *gin.Context) {
 		ProgramCount int64 `json:"program_count"`
 	}
 
-	var result []EPGSourceWithCounts
+	result := make([]EPGSourceWithCounts, 0)
 	for _, s := range sources {
 		var channelCount int64
 		var programCount int64

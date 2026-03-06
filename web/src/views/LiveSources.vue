@@ -352,7 +352,7 @@ async function loadSources(showLoading = true) {
   if (showLoading) loading.value = true
   try {
     const { data } = await api.get('/live-sources')
-    sources.value = data
+    sources.value = data || []
     
     // Check polling
     const hasSyncing = sources.value.some(s => s.is_syncing)
