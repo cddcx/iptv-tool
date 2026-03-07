@@ -23,7 +23,30 @@ type Channel struct {
 var (
 	extinfRegex = regexp.MustCompile(`#EXTINF:-?\d+\s*(.*)?,(.*)`)
 	attrRegex   = regexp.MustCompile(`(\S+?)="(.*?)"`)
+	tvgURLRegex = regexp.MustCompile(`(?i)x-tvg-url="([^"]+)"`)
 )
+
+// ExtractTvgURL extracts the x-tvg-url attribute from the #EXTM3U header line.
+// Returns the URL string if found, or empty string if not present.
+func ExtractTvgURL(content string) string {
+	scanner := bufio.NewScanner(strings.NewReader(content))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "#EXTM3U") {
+			matches := tvgURLRegex.FindStringSubmatch(line)
+			if len(matches) >= 2 {
+				return strings.TrimSpace(matches[1])
+			}
+			return ""
+		}
+		// If the first non-empty line is not #EXTM3U, this is not standard M3U
+		return ""
+	}
+	return ""
+}
 
 // ParseM3U parses M3U format content and returns a list of channels
 func ParseM3U(content string) ([]Channel, error) {

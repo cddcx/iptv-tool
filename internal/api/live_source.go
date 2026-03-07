@@ -125,13 +125,15 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 	}
 
 	// Validate URL or content based on type
+	var tvgURL string
 	switch req.Type {
 	case model.LiveSourceTypeNetworkURL:
 		if req.URL == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "网络链接类型需要提供URL"})
 			return
 		}
-		if _, err := lc.liveService.ValidateNetworkURL(req.URL, string(req.Headers)); err != nil {
+		var err error
+		if _, tvgURL, err = lc.liveService.ValidateNetworkURL(req.URL, string(req.Headers)); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -140,7 +142,8 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "手动输入类型需要提供内容"})
 			return
 		}
-		if _, err := lc.liveService.ValidateManualContent(req.Content); err != nil {
+		var err error
+		if _, tvgURL, err = lc.liveService.ValidateManualContent(req.Content); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -192,6 +195,32 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		}
 	}
 
+	// Auto-create EPG source from x-tvg-url for network_url/network_manual types
+	if (req.Type == model.LiveSourceTypeNetworkURL || req.Type == model.LiveSourceTypeNetworkManual) && req.EPGEnabled && tvgURL != "" {
+		// Check if an EPG source with the same URL already exists to avoid duplicates
+		var existingCount int64
+		model.DB.Model(&model.EPGSource{}).Where("url = ?", tvgURL).Count(&existingCount)
+		if existingCount == 0 {
+			epgSource := model.EPGSource{
+				Name:      source.Name + " - EPG",
+				Type:      model.EPGSourceTypeNetworkXMLTV,
+				URL:       tvgURL,
+				CronTime:  req.CronTime,
+				Status:    true,
+				IsSyncing: true,
+			}
+			if err := model.DB.Create(&epgSource).Error; err == nil {
+				slog.Info("Auto-created EPG source from x-tvg-url", "epg_id", epgSource.ID, "url", tvgURL, "live_source", source.Name)
+				if epgSource.CronTime != "" {
+					lc.scheduler.AddEPGSourceTask(epgSource.ID, epgSource.CronTime)
+				}
+				lc.scheduler.TriggerEPGSourceNow(epgSource.ID)
+			}
+		} else {
+			slog.Info("Skipped auto-create EPG source, URL already exists", "url", tvgURL)
+		}
+	}
+
 	// Schedule cron task if applicable
 	if source.CronTime != "" && source.Type != model.LiveSourceTypeNetworkManual {
 		lc.scheduler.AddLiveSourceTask(source.ID, source.CronTime)
@@ -219,15 +248,16 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 
 // UpdateLiveSourceRequest is the request body for updating a live source
 type UpdateLiveSourceRequest struct {
-	Name        *string          `json:"name"`
-	Description *string          `json:"description"`
-	URL         *string          `json:"url"`
-	Content     *string          `json:"content"`
-	Headers     *json.RawMessage `json:"headers"`
-	CronTime    *string          `json:"cron_time"`
-	CronDetect  *string          `json:"cron_detect"`
-	Status      *bool            `json:"status"`
-	IPTVConfig  *json.RawMessage `json:"iptv_config"`
+	Name          *string          `json:"name"`
+	Description   *string          `json:"description"`
+	URL           *string          `json:"url"`
+	Content       *string          `json:"content"`
+	Headers       *json.RawMessage `json:"headers"`
+	CronTime      *string          `json:"cron_time"`
+	CronDetect    *string          `json:"cron_detect"`
+	Status        *bool            `json:"status"`
+	IPTVConfig    *json.RawMessage `json:"iptv_config"`
+	AutoCreateEPG *bool            `json:"auto_create_epg"` // Whether to auto-create EPG source from x-tvg-url
 }
 
 // Update modifies a live source
@@ -307,6 +337,41 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 
 	// Reload to get updated fields
 	model.DB.First(&source, uint(id))
+
+	// Auto-create EPG source from x-tvg-url if requested during update
+	if req.AutoCreateEPG != nil && *req.AutoCreateEPG {
+		if source.Type == model.LiveSourceTypeNetworkURL || source.Type == model.LiveSourceTypeNetworkManual {
+			var tvgURL string
+			if source.Type == model.LiveSourceTypeNetworkURL && source.URL != "" {
+				_, tvgURL, _ = lc.liveService.ValidateNetworkURL(source.URL, source.Headers)
+			} else if source.Type == model.LiveSourceTypeNetworkManual && source.Content != "" {
+				_, tvgURL, _ = lc.liveService.ValidateManualContent(source.Content)
+			}
+			if tvgURL != "" {
+				var existingCount int64
+				model.DB.Model(&model.EPGSource{}).Where("url = ?", tvgURL).Count(&existingCount)
+				if existingCount == 0 {
+					epgSource := model.EPGSource{
+						Name:      source.Name + " - EPG",
+						Type:      model.EPGSourceTypeNetworkXMLTV,
+						URL:       tvgURL,
+						CronTime:  source.CronTime,
+						Status:    true,
+						IsSyncing: true,
+					}
+					if err := model.DB.Create(&epgSource).Error; err == nil {
+						slog.Info("Auto-created EPG source from x-tvg-url (update)", "epg_id", epgSource.ID, "url", tvgURL, "live_source", source.Name)
+						if epgSource.CronTime != "" {
+							lc.scheduler.AddEPGSourceTask(epgSource.ID, epgSource.CronTime)
+						}
+						lc.scheduler.TriggerEPGSourceNow(epgSource.ID)
+					}
+				} else {
+					slog.Info("Skipped auto-create EPG source (update), URL already exists", "url", tvgURL)
+				}
+			}
+		}
+	}
 
 	// Update scheduler for refresh tasks
 	if source.Type != model.LiveSourceTypeNetworkManual && source.CronTime != "" && source.Status {

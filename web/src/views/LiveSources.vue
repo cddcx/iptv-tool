@@ -183,7 +183,7 @@
           </div>
         </el-form-item>
 
-        <!-- EPG sync -->
+        <!-- EPG sync for IPTV -->
         <template v-if="form.type === 'iptv' && !isEdit">
           <el-form-item label="同步EPG">
             <el-switch v-model="form.epg_enabled" />
@@ -195,6 +195,16 @@
             </el-select>
             <div style="color: #909399; font-size: 12px; margin-top: 4px">
               选择"自动检测"将依次尝试所有策略，成功后自动记录
+            </div>
+          </el-form-item>
+        </template>
+
+        <!-- Auto-create EPG for network types -->
+        <template v-if="(form.type === 'network_url' || form.type === 'network_manual')">
+          <el-form-item label="自动创建EPG">
+            <el-switch v-model="form.epg_enabled" />
+            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
+              若内容为M3U格式且包含 x-tvg-url 属性，将自动创建网络XMLTV类型的EPG源
             </div>
           </el-form-item>
         </template>
@@ -547,6 +557,9 @@ async function handleSubmit() {
       const body = { name: form.name, description: form.description, url: form.url, content: form.content, headers: headersJson, cron_time: form.cron_time, cron_detect: form.cron_detect, status: form.status }
       if (form.type === 'iptv') {
         body.iptv_config = buildIptvConfig()
+      }
+      if ((form.type === 'network_url' || form.type === 'network_manual') && form.epg_enabled) {
+        body.auto_create_epg = true
       }
       await api.put(`/live-sources/${editId.value}`, body)
       ElMessage.success('更新成功')

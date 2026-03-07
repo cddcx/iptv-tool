@@ -82,11 +82,11 @@ func (s *LiveSourceService) FetchAndUpdate(sourceID uint) error {
 }
 
 // ValidateNetworkURL validates a URL by fetching it and checking if the content is valid M3U or TXT format.
-// Returns the detected format ("m3u" or "txt") and any error.
-func (s *LiveSourceService) ValidateNetworkURL(sourceURL string, headersJSON string) (string, error) {
+// Returns the detected format ("m3u" or "txt"), the x-tvg-url if present, and any error.
+func (s *LiveSourceService) ValidateNetworkURL(sourceURL string, headersJSON string) (string, string, error) {
 	content, err := s.fetchURLContent(sourceURL, headersJSON)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	format := m3u.DetectFormat(content)
@@ -98,21 +98,27 @@ func (s *LiveSourceService) ValidateNetworkURL(sourceURL string, headersJSON str
 	case "txt":
 		channels, err = m3u.ParseTXT(content)
 	default:
-		return "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
+		return "", "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
 	}
 	if err != nil {
-		return "", fmt.Errorf("content parsing failed: %w", err)
+		return "", "", fmt.Errorf("content parsing failed: %w", err)
 	}
 	if len(channels) == 0 {
-		return "", fmt.Errorf("未找到频道，请检查URL是否正确")
+		return "", "", fmt.Errorf("未找到频道，请检查URL是否正确")
 	}
 
-	return format, nil
+	// Extract x-tvg-url from M3U header if present
+	var tvgURL string
+	if format == "m3u" {
+		tvgURL = m3u.ExtractTvgURL(content)
+	}
+
+	return format, tvgURL, nil
 }
 
 // ValidateManualContent validates manually inputted content.
-// Returns the detected format ("m3u" or "txt") and any error.
-func (s *LiveSourceService) ValidateManualContent(content string) (string, error) {
+// Returns the detected format ("m3u" or "txt"), the x-tvg-url if present, and any error.
+func (s *LiveSourceService) ValidateManualContent(content string) (string, string, error) {
 	format := m3u.DetectFormat(content)
 	var channels []m3u.Channel
 	var err error
@@ -122,15 +128,22 @@ func (s *LiveSourceService) ValidateManualContent(content string) (string, error
 	case "txt":
 		channels, err = m3u.ParseTXT(content)
 	default:
-		return "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
+		return "", "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
 	}
 	if err != nil {
-		return "", fmt.Errorf("content parsing failed: %w", err)
+		return "", "", fmt.Errorf("content parsing failed: %w", err)
 	}
 	if len(channels) == 0 {
-		return "", fmt.Errorf("未找到频道")
+		return "", "", fmt.Errorf("未找到频道")
 	}
-	return format, nil
+
+	// Extract x-tvg-url from M3U header if present
+	var tvgURL string
+	if format == "m3u" {
+		tvgURL = m3u.ExtractTvgURL(content)
+	}
+
+	return format, tvgURL, nil
 }
 
 func (s *LiveSourceService) fetchIPTV(source model.LiveSource) ([]m3u.Channel, error) {
