@@ -83,6 +83,7 @@ type CreateLiveSourceRequest struct {
 	Content     string               `json:"content"`
 	Headers     json.RawMessage      `json:"headers"`
 	CronTime    string               `json:"cron_time"`
+	CronDetect  string               `json:"cron_detect"`
 	IPTVConfig  json.RawMessage      `json:"iptv_config"`
 	EPGEnabled  bool                 `json:"epg_enabled"` // Whether to auto-create EPG source
 }
@@ -107,11 +108,18 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 	// Validate cron_time for non-manual sources
 	if req.Type != model.LiveSourceTypeNetworkManual && req.CronTime != "" {
 		if !task.ValidateCronTime(req.CronTime) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时任务表达式"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时刷新表达式"})
 			return
 		}
 	}
-	// network_manual sources must not have cron
+	// Validate cron_detect
+	if req.CronDetect != "" {
+		if !task.ValidateCronTime(req.CronDetect) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时检测表达式"})
+			return
+		}
+	}
+	// network_manual sources must not have cron refresh (but can have cron detect)
 	if req.Type == model.LiveSourceTypeNetworkManual {
 		req.CronTime = ""
 	}
@@ -151,6 +159,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		Content:     req.Content,
 		Headers:     string(req.Headers),
 		CronTime:    req.CronTime,
+		CronDetect:  req.CronDetect,
 		Status:      true,
 		IsSyncing:   true,
 		IPTVConfig:  string(req.IPTVConfig),
@@ -188,6 +197,11 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		lc.scheduler.AddLiveSourceTask(source.ID, source.CronTime)
 	}
 
+	// Schedule detect cron task if applicable
+	if source.CronDetect != "" {
+		lc.scheduler.AddDetectTask(source.ID, source.CronDetect)
+	}
+
 	// Trigger initial fetch for Live Source
 	lc.scheduler.TriggerLiveSourceNow(source.ID)
 
@@ -211,6 +225,7 @@ type UpdateLiveSourceRequest struct {
 	Content     *string          `json:"content"`
 	Headers     *json.RawMessage `json:"headers"`
 	CronTime    *string          `json:"cron_time"`
+	CronDetect  *string          `json:"cron_detect"`
 	Status      *bool            `json:"status"`
 	IPTVConfig  *json.RawMessage `json:"iptv_config"`
 }
@@ -270,11 +285,18 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 			updates["cron_time"] = "" // Force no cron for manual sources
 		} else {
 			if *req.CronTime != "" && !task.ValidateCronTime(*req.CronTime) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时任务表达式"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时刷新表达式"})
 				return
 			}
 			updates["cron_time"] = *req.CronTime
 		}
+	}
+	if req.CronDetect != nil {
+		if *req.CronDetect != "" && !task.ValidateCronTime(*req.CronDetect) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时检测表达式"})
+			return
+		}
+		updates["cron_detect"] = *req.CronDetect
 	}
 
 	if err := model.DB.Model(&source).Updates(updates).Error; err != nil {
@@ -286,11 +308,18 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 	// Reload to get updated fields
 	model.DB.First(&source, uint(id))
 
-	// Update scheduler
+	// Update scheduler for refresh tasks
 	if source.Type != model.LiveSourceTypeNetworkManual && source.CronTime != "" && source.Status {
 		lc.scheduler.AddLiveSourceTask(source.ID, source.CronTime)
 	} else {
 		lc.scheduler.RemoveLiveSourceTask(source.ID)
+	}
+
+	// Update scheduler for detect tasks
+	if source.CronDetect != "" && source.Status {
+		lc.scheduler.AddDetectTask(source.ID, source.CronDetect)
+	} else {
+		lc.scheduler.RemoveDetectTask(source.ID)
 	}
 
 	c.JSON(http.StatusOK, source)
@@ -358,6 +387,7 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 
 	// Remove from scheduler
 	lc.scheduler.RemoveLiveSourceTask(sourceID)
+	lc.scheduler.RemoveDetectTask(sourceID)
 
 	// Delete associated parsed channels
 	model.DB.Where("source_id = ?", sourceID).Delete(&model.ParsedChannel{})
@@ -413,6 +443,25 @@ func (lc *LiveSourceController) GetChannels(c *gin.Context) {
 		"total":    len(channels),
 		"channels": channels,
 	})
+}
+
+// TriggerDetect manually triggers channel detection for a live source
+// POST /api/live-sources/:id/detect
+func (lc *LiveSourceController) TriggerDetect(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		return
+	}
+
+	// Check if ffmpeg is available before triggering detection
+	if err := lc.scheduler.CheckFFmpeg(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请先在系统设置中上传 ffmpeg 文件"})
+		return
+	}
+
+	lc.scheduler.TriggerDetectNow(uint(id))
+	c.JSON(http.StatusOK, gin.H{"message": "已触发检测"})
 }
 
 // UnlinkedIPTV returns IPTV live sources that do NOT have an associated EPG source

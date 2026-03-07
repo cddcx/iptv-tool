@@ -260,10 +260,23 @@ func (e *Engine) AggregateLiveChannels(requestHost string) ([]AggregatedChannel,
 	// For Auto-logo, load map once
 	e.buildLogoMap(requestHost)
 
+	// Build set of source IDs that should filter timeout channels
+	filterInvalidSet := make(map[uint]bool)
+	for _, id := range parseSourceIDs(e.iface.FilterInvalidSourceIDs) {
+		filterInvalidSet[id] = true
+	}
+
 	var result []AggregatedChannel
 	seen := make(map[string]bool)
 
 	for _, ch := range parsedChannels {
+		// Stage 0: Skip channels that have been detected as timeout (latency == -1)
+		// Only filter if the channel's source is in the filter-invalid set
+		// Channels that have not been detected (latency == nil) are NOT filtered
+		if ch.Latency != nil && *ch.Latency == -1 && filterInvalidSet[ch.SourceID] {
+			continue
+		}
+
 		// Stage 1: Alias
 		alias := e.applyAlias(ch.Name)
 

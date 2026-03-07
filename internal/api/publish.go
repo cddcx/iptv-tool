@@ -52,20 +52,21 @@ func (pc *PublishController) GetInterface(c *gin.Context) {
 
 // CreateInterfaceRequest is the request body for creating a publish interface
 type CreateInterfaceRequest struct {
-	Name               string              `json:"name" binding:"required"`
-	Description        string              `json:"description"`
-	Path               string              `json:"path" binding:"required"`
-	Type               string              `json:"type" binding:"required,oneof=live epg"`
-	Format             model.PublishFormat `json:"format" binding:"required"`
-	SourceIDs          string              `json:"source_ids"`
-	RuleIDs            string              `json:"rule_ids"`
-	TvgIDMode          string              `json:"tvg_id_mode"`
-	EPGDays            int                 `json:"epg_days"`
-	GzipEnabled        bool                `json:"gzip_enabled"`
-	AddressType        string              `json:"address_type"`
-	MulticastType      string              `json:"multicast_type"`
-	UDPxyURL           string              `json:"udpxy_url"`
-	M3UCatchupTemplate string              `json:"m3u_catchup_template"`
+	Name                   string              `json:"name" binding:"required"`
+	Description            string              `json:"description"`
+	Path                   string              `json:"path" binding:"required"`
+	Type                   string              `json:"type" binding:"required,oneof=live epg"`
+	Format                 model.PublishFormat `json:"format" binding:"required"`
+	SourceIDs              string              `json:"source_ids"`
+	RuleIDs                string              `json:"rule_ids"`
+	TvgIDMode              string              `json:"tvg_id_mode"`
+	EPGDays                int                 `json:"epg_days"`
+	GzipEnabled            bool                `json:"gzip_enabled"`
+	AddressType            string              `json:"address_type"`
+	MulticastType          string              `json:"multicast_type"`
+	UDPxyURL               string              `json:"udpxy_url"`
+	M3UCatchupTemplate     string              `json:"m3u_catchup_template"`
+	FilterInvalidSourceIDs string              `json:"filter_invalid_source_ids"`
 }
 
 // CreateInterface adds a new publish interface
@@ -104,20 +105,22 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 	}
 
 	iface := model.PublishInterface{
-		Name:               req.Name,
-		Description:        req.Description,
-		Path:               req.Path,
-		Type:               req.Type,
-		Format:             req.Format,
-		SourceIDs:          req.SourceIDs,
-		RuleIDs:            req.RuleIDs,
-		TvgIDMode:          req.TvgIDMode,
-		Status:             true,
-		EPGDays:            req.EPGDays,
-		GzipEnabled:        req.GzipEnabled,
-		MulticastType:      req.MulticastType,
-		UDPxyURL:           req.UDPxyURL,
-		M3UCatchupTemplate: req.M3UCatchupTemplate,
+		Name:                   req.Name,
+		Description:            req.Description,
+		Path:                   req.Path,
+		Type:                   req.Type,
+		Format:                 req.Format,
+		SourceIDs:              req.SourceIDs,
+		RuleIDs:                req.RuleIDs,
+		TvgIDMode:              req.TvgIDMode,
+		Status:                 true,
+		EPGDays:                req.EPGDays,
+		GzipEnabled:            req.GzipEnabled,
+		AddressType:            req.AddressType,
+		MulticastType:          req.MulticastType,
+		UDPxyURL:               req.UDPxyURL,
+		M3UCatchupTemplate:     req.M3UCatchupTemplate,
+		FilterInvalidSourceIDs: req.FilterInvalidSourceIDs,
 	}
 
 	if err := model.DB.Create(&iface).Error; err != nil {
@@ -131,20 +134,21 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 
 // UpdateInterfaceRequest is the request body for updating a publish interface
 type UpdateInterfaceRequest struct {
-	Name               *string              `json:"name"`
-	Description        *string              `json:"description"`
-	Path               *string              `json:"path"`
-	Format             *model.PublishFormat `json:"format"`
-	SourceIDs          *string              `json:"source_ids"`
-	RuleIDs            *string              `json:"rule_ids"`
-	TvgIDMode          *string              `json:"tvg_id_mode"`
-	Status             *bool                `json:"status"`
-	EPGDays            *int                 `json:"epg_days"`
-	GzipEnabled        *bool                `json:"gzip_enabled"`
-	AddressType        *string              `json:"address_type"`
-	MulticastType      *string              `json:"multicast_type"`
-	UDPxyURL           *string              `json:"udpxy_url"`
-	M3UCatchupTemplate *string              `json:"m3u_catchup_template"`
+	Name                   *string              `json:"name"`
+	Description            *string              `json:"description"`
+	Path                   *string              `json:"path"`
+	Format                 *model.PublishFormat `json:"format"`
+	SourceIDs              *string              `json:"source_ids"`
+	RuleIDs                *string              `json:"rule_ids"`
+	TvgIDMode              *string              `json:"tvg_id_mode"`
+	Status                 *bool                `json:"status"`
+	EPGDays                *int                 `json:"epg_days"`
+	GzipEnabled            *bool                `json:"gzip_enabled"`
+	AddressType            *string              `json:"address_type"`
+	MulticastType          *string              `json:"multicast_type"`
+	UDPxyURL               *string              `json:"udpxy_url"`
+	M3UCatchupTemplate     *string              `json:"m3u_catchup_template"`
+	FilterInvalidSourceIDs *string              `json:"filter_invalid_source_ids"`
 }
 
 // UpdateInterface modifies a publish interface
@@ -226,6 +230,9 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 	if req.M3UCatchupTemplate != nil {
 		updates["m3u_catchup_template"] = *req.M3UCatchupTemplate
 	}
+	if req.FilterInvalidSourceIDs != nil {
+		updates["filter_invalid_source_ids"] = *req.FilterInvalidSourceIDs
+	}
 
 	if len(updates) > 0 {
 		if err := model.DB.Model(&iface).Updates(updates).Error; err != nil {
@@ -265,12 +272,13 @@ func GetCronOptions(c *gin.Context) {
 
 // PreviewRequest is the request body for previewing the publish output
 type PreviewRequest struct {
-	Type          string `json:"type" binding:"required"`
-	SourceIDs     string `json:"source_ids"`
-	RuleIDs       string `json:"rule_ids"`
-	AddressType   string `json:"address_type"`
-	MulticastType string `json:"multicast_type"`
-	UDPxyURL      string `json:"udpxy_url"`
+	Type                   string `json:"type" binding:"required"`
+	SourceIDs              string `json:"source_ids"`
+	RuleIDs                string `json:"rule_ids"`
+	AddressType            string `json:"address_type"`
+	MulticastType          string `json:"multicast_type"`
+	UDPxyURL               string `json:"udpxy_url"`
+	FilterInvalidSourceIDs string `json:"filter_invalid_source_ids"`
 }
 
 // PreviewInterface generates a dry-run preview of the aggregated channels/epgs
@@ -284,12 +292,13 @@ func (pc *PublishController) PreviewInterface(c *gin.Context) {
 
 	// Create a dummy interface purely for the engine to consume IDs
 	dummyIface := model.PublishInterface{
-		Type:          req.Type,
-		SourceIDs:     req.SourceIDs,
-		RuleIDs:       req.RuleIDs,
-		AddressType:   req.AddressType,
-		MulticastType: req.MulticastType,
-		UDPxyURL:      req.UDPxyURL,
+		Type:                   req.Type,
+		SourceIDs:              req.SourceIDs,
+		RuleIDs:                req.RuleIDs,
+		AddressType:            req.AddressType,
+		MulticastType:          req.MulticastType,
+		UDPxyURL:               req.UDPxyURL,
+		FilterInvalidSourceIDs: req.FilterInvalidSourceIDs,
 	}
 
 	eng, err := publish.NewEngine(dummyIface)

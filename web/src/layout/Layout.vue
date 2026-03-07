@@ -41,6 +41,10 @@
             <el-icon><Setting /></el-icon>
             <span>系统设置</span>
           </template>
+          <el-menu-item index="/settings/detect">
+            <el-icon><Stopwatch /></el-icon>
+            <template #title>直播检测</template>
+          </el-menu-item>
           <el-menu-item index="/settings/password">
             <el-icon><Lock /></el-icon>
             <template #title>修改密码</template>
@@ -56,9 +60,6 @@
           <Fold v-if="!isCollapsed" />
           <Expand v-else />
         </el-icon>
-        <transition name="fade">
-          <span v-if="!isCollapsed" style="margin-left: 8px; font-size: 13px">收起菜单</span>
-        </transition>
       </div>
     </el-aside>
     <el-container>
@@ -97,7 +98,7 @@
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown, Lock, InfoFilled } from '@element-plus/icons-vue'
+import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown, Lock, InfoFilled, Stopwatch } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()

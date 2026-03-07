@@ -44,6 +44,11 @@ const routes = [
         component: () => import('../views/Publish.vue'),
       },
       {
+        path: 'settings/detect',
+        name: 'SettingsDetect',
+        component: () => import('../views/SettingsDetect.vue'),
+      },
+      {
         path: 'settings/password',
         name: 'SettingsPassword',
         component: () => import('../views/SettingsPassword.vue'),

@@ -31,9 +31,11 @@ type LiveSource struct {
 	URL           string         `json:"url"`                  // For network_url
 	Content       string         `json:"content"`              // For network_manual
 	CronTime      string         `json:"cron_time"`            // 1h, 2h, 4h, 6h, 12h, 24h
+	CronDetect    string         `json:"cron_detect"`          // Scheduled detection interval, same options as CronTime
 	Headers       string         `json:"headers"`              // JSON string for network_url custom headers
 	Status        bool           `gorm:"default:true" json:"status"`
 	IsSyncing     bool           `gorm:"default:false" json:"is_syncing"`
+	IsDetecting   bool           `gorm:"default:false" json:"is_detecting"`
 	IPTVConfig    string         `gorm:"column:iptv_config" json:"iptv_config"` // JSON string for IPTV specific configs (platform, credentials)
 	LastFetchedAt *time.Time     `json:"last_fetched_at"`
 	LastError     string         `json:"last_error"`
@@ -102,10 +104,11 @@ type PublishInterface struct {
 	GzipEnabled bool `json:"gzip_enabled"` // For XMLTV
 
 	// Live specific
-	AddressType        string `json:"address_type"`                                            // multicast, unicast
-	MulticastType      string `json:"multicast_type"`                                          // udpxy, rtp, igmp
-	UDPxyURL           string `gorm:"column:udpxy_url" json:"udpxy_url"`                       // e.g., http://192.168.1.1:4022
-	M3UCatchupTemplate string `gorm:"column:m3u_catchup_template" json:"m3u_catchup_template"` // e.g., playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}
+	AddressType            string `json:"address_type"`                                            // multicast, unicast
+	MulticastType          string `json:"multicast_type"`                                          // udpxy, rtp, igmp
+	UDPxyURL               string `gorm:"column:udpxy_url" json:"udpxy_url"`                       // e.g., http://192.168.1.1:4022
+	M3UCatchupTemplate     string `gorm:"column:m3u_catchup_template" json:"m3u_catchup_template"` // e.g., playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}
+	FilterInvalidSourceIDs string `json:"filter_invalid_source_ids"`                               // Comma-separated source IDs that should filter timeout channels
 
 	TvgIDMode string    `gorm:"default:'channel_id'" json:"tvg_id_mode"` // channel_id or name
 	RuleIDs   string    `json:"rule_ids"`                                // Comma-separated IDs of AggregationRule
@@ -145,16 +148,25 @@ type AggregationRule struct {
 
 // ParsedChannel represents a channel parsed from any source
 type ParsedChannel struct {
-	ID          uint   `gorm:"primarykey" json:"id"`
-	SourceID    uint   `gorm:"index" json:"source_id"`
-	TVGId       string `json:"tvg_id"`
-	TVGName     string `json:"tvg_name"`
-	Name        string `gorm:"index" json:"name"`
-	Group       string `json:"group"`
-	Logo        string `json:"logo"`
-	URL         string `json:"url"`
-	CatchupURL  string `json:"catchup_url"`  // Original timeshift/catchup base URL
-	CatchupDays int    `json:"catchup_days"` // Days available for catchup
+	ID          uint       `gorm:"primarykey" json:"id"`
+	SourceID    uint       `gorm:"index" json:"source_id"`
+	TVGId       string     `json:"tvg_id"`
+	TVGName     string     `json:"tvg_name"`
+	Name        string     `gorm:"index" json:"name"`
+	Group       string     `json:"group"`
+	Logo        string     `json:"logo"`
+	URL         string     `json:"url"`
+	CatchupURL  string     `json:"catchup_url"`  // Original timeshift/catchup base URL
+	CatchupDays int        `json:"catchup_days"` // Days available for catchup
+	Latency     *int       `json:"latency"`      // Detection latency in ms: nil=not detected, -1=timeout, >0=normal latency
+	DetectedAt  *time.Time `json:"detected_at"`  // Last detection time
+}
+
+// SystemSetting stores key-value system configuration
+type SystemSetting struct {
+	ID    uint   `gorm:"primarykey" json:"id"`
+	Key   string `gorm:"uniqueIndex;not null" json:"key"`
+	Value string `gorm:"not null" json:"value"`
 }
 
 // ParsedEPG represents a single EPG program

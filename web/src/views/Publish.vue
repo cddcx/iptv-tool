@@ -80,9 +80,30 @@
         </el-form-item>
 
         <el-form-item label="数据源" prop="source_ids_arr">
-          <el-select v-model="form.source_ids_arr" multiple placeholder="请选择启用的数据源" style="width: 100%">
-            <el-option v-for="src in availableSources" :key="src.id" :label="src.name" :value="src.id" />
+          <el-select v-model="form.source_ids_arr" multiple placeholder="请选择启用的数据源" style="width: 100%" @change="onSourceChange">
+            <el-option v-for="src in availableSources" :key="src.id" :label="src.name" :value="src.id">
+              <span style="float: left">{{ src.name }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px" v-if="src.description">{{ src.description }}</span>
+            </el-option>
           </el-select>
+        </el-form-item>
+
+        <!-- 已选直播数据源的过滤无效数据开关 -->
+        <el-form-item v-if="form.type === 'live' && form.source_ids_arr.length > 0" label="过滤无效数据">
+          <div style="width: 100%">
+            <div style="color: #909399; font-size: 12px; margin-bottom: 8px; line-height: 1.4">
+              开启后，聚合时将自动过滤检测超时的无效频道
+            </div>
+            <div v-for="srcId in form.source_ids_arr" :key="srcId"
+              style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; margin-bottom: 4px; background: var(--el-fill-color-light); border-radius: 4px;">
+              <span style="font-size: 13px;">{{ getSourceName(srcId) }}</span>
+              <el-switch
+                :model-value="form.filter_invalid_source_ids_arr.includes(srcId)"
+                @change="(val) => toggleFilterInvalid(srcId, val)"
+                size="small"
+              />
+            </div>
+          </div>
         </el-form-item>
 
         <!-- 新的聚合规则多选下拉框 -->
@@ -244,7 +265,7 @@ const previewData = ref([])
 const defaultForm = () => ({
   name: '', description: '', path: '', type: 'live', format: 'm3u', source_ids_arr: [], rule_ids_arr: [], status: true,
   address_type: 'multicast', multicast_type: 'udpxy', udpxy_url: '', m3u_catchup_template: '',
-  epg_days: 7, gzip_enabled: false, tvg_id_mode: 'channel_id'
+  epg_days: 7, gzip_enabled: false, tvg_id_mode: 'channel_id', filter_invalid_source_ids_arr: []
 })
 const form = reactive(defaultForm())
 const formRules = {
@@ -287,6 +308,7 @@ async function fetchRules() {
 function onTypeChange(newType) {
   form.format = newType === 'live' ? 'm3u' : 'xmltv'
   form.source_ids_arr = []
+  form.filter_invalid_source_ids_arr = []
 
   // 类型切换时，清洗掉已选择的不兼容规则 (比如原本选了分组，现在切到EPG，就把分组ID剔除掉)
   if (newType === 'epg') {
@@ -295,6 +317,25 @@ function onTypeChange(newType) {
   }
 
   fetchSources(newType)
+}
+function onSourceChange(newIds) {
+  // 新选择的源默认加入过滤列表，已移除的源从过滤列表中清除
+  const added = newIds.filter(id => !form.filter_invalid_source_ids_arr.includes(id))
+  form.filter_invalid_source_ids_arr = form.filter_invalid_source_ids_arr.filter(id => newIds.includes(id))
+  form.filter_invalid_source_ids_arr.push(...added)
+}
+function getSourceName(srcId) {
+  const src = availableSources.value.find(s => s.id === srcId)
+  return src ? src.name : `数据源 #${srcId}`
+}
+function toggleFilterInvalid(srcId, val) {
+  if (val) {
+    if (!form.filter_invalid_source_ids_arr.includes(srcId)) {
+      form.filter_invalid_source_ids_arr.push(srcId)
+    }
+  } else {
+    form.filter_invalid_source_ids_arr = form.filter_invalid_source_ids_arr.filter(id => id !== srcId)
+  }
 }
 function showCreate() {
   isEdit.value = false; editId.value = null
@@ -312,6 +353,7 @@ function showEdit(row) {
     name: row.name, description: row.description || '', path: row.path, type: row.type, format: row.format,
     source_ids_arr: parseIds(row.source_ids),
     rule_ids_arr: parseIds(row.rule_ids),
+    filter_invalid_source_ids_arr: parseIds(row.filter_invalid_source_ids),
     status: row.status,
     tvg_id_mode: row.tvg_id_mode || 'channel_id',
     address_type: row.address_type || 'multicast',
@@ -339,7 +381,8 @@ async function handlePreview() {
       rule_ids: form.rule_ids_arr.join(','),
       address_type: form.address_type,
       multicast_type: form.multicast_type,
-      udpxy_url: form.udpxy_url
+      udpxy_url: form.udpxy_url,
+      filter_invalid_source_ids: form.filter_invalid_source_ids_arr.join(',')
     })
     previewData.value = data || []
   } catch (e) {
@@ -356,6 +399,7 @@ async function handleSubmit() {
       name: form.name, description: form.description, path: form.path, type: form.type, format: form.format,
       source_ids: form.source_ids_arr.join(','), 
       rule_ids: form.rule_ids_arr.join(','),
+      filter_invalid_source_ids: form.filter_invalid_source_ids_arr.join(','),
       tvg_id_mode: form.tvg_id_mode,
       address_type: form.address_type,
       multicast_type: form.multicast_type,

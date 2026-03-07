@@ -35,6 +35,10 @@
             <el-icon class="is-loading" :size="16"><Loading /></el-icon>
             <span>同步中...</span>
           </div>
+          <div v-else-if="row.is_detecting" style="display: flex; align-items: center; gap: 6px; color: #e6a23c">
+            <el-icon class="is-loading" :size="16"><Loading /></el-icon>
+            <span>检测中...</span>
+          </div>
           <div v-else-if="row.last_fetched_at" style="display: flex; align-items: center; gap: 6px">
             <el-tooltip v-if="row.last_error" :content="row.last_error" placement="top" :show-after="300">
               <el-icon color="#f56c6c" :size="16" style="cursor: pointer; flex-shrink: 0"><CircleCloseFilled /></el-icon>
@@ -169,6 +173,16 @@
           </el-select>
         </el-form-item>
 
+        <!-- Cron Detect -->
+        <el-form-item label="定时检测">
+          <el-select v-model="form.cron_detect" clearable placeholder="不定时检测" style="width: 100%">
+            <el-option v-for="opt in cronOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+          <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
+            使用 ffmpeg 定时检测频道延迟，需先在系统设置中上传 ffmpeg 文件
+          </div>
+        </el-form-item>
+
         <!-- EPG sync -->
         <template v-if="form.type === 'iptv' && !isEdit">
           <el-form-item label="同步EPG">
@@ -216,12 +230,29 @@
     </el-dialog>
 
     <!-- Channels Dialog -->
-    <el-dialog v-model="channelsVisible" title="已解析频道列表" width="800px" destroy-on-close :close-on-click-modal="false">
-      <p style="margin: 0 0 12px; color: #909399">共 {{ channels.length }} 个频道</p>
+    <el-dialog v-model="channelsVisible" title="已解析频道列表" width="900px" destroy-on-close :close-on-click-modal="false">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+        <span style="color: #909399">共 {{ channels.length }} 个频道</span>
+        <el-button type="warning" size="small" @click="triggerDetect" :loading="detectTriggering" :disabled="channelsDetecting">
+          {{ channelsDetecting ? '检测中...' : '检测' }}
+        </el-button>
+      </div>
       <el-table :data="channels" max-height="400" border stripe size="small">
         <el-table-column prop="tvg_id" label="频道ID" width="120" show-overflow-tooltip />
         <el-table-column prop="name" label="频道名" width="130" />
         <el-table-column prop="group" label="分组" width="100" />
+        <el-table-column label="延迟" width="90" align="center">
+          <template #default="{ row }">
+            <span v-if="channelsDetecting && (row.latency === null || row.latency === undefined)">
+              <el-icon class="is-loading" :size="14"><Loading /></el-icon>
+            </span>
+            <span v-else-if="row.latency === null || row.latency === undefined">-</span>
+            <span v-else-if="row.latency === -1" style="color: #f56c6c; font-weight: 600">Timeout</span>
+            <span v-else-if="row.latency < 500" style="color: #67c23a; font-weight: 600">{{ row.latency }}ms</span>
+            <span v-else-if="row.latency < 1000" style="color: #409eff; font-weight: 600">{{ row.latency }}ms</span>
+            <span v-else style="color: #e6a23c; font-weight: 600">{{ row.latency }}ms</span>
+          </template>
+        </el-table-column>
         <el-table-column label="地址" min-width="250">
           <template #default="{ row }">
             <div v-if="row.url && row.url.includes('|')">
@@ -252,11 +283,16 @@ let pollingTimer = null
 
 onUnmounted(() => {
   if (pollingTimer) clearInterval(pollingTimer)
+  stopDetectPolling()
 })
 
 const dialogVisible = ref(false)
 const channelsVisible = ref(false)
 const channels = ref([])
+const channelsSourceId = ref(null)
+const channelsDetecting = ref(false)
+const detectTriggering = ref(false)
+let detectPollingTimer = null
 const isEdit = ref(false)
 const editId = ref(null)
 const submitting = ref(false)
@@ -307,7 +343,7 @@ const authParamsExample = JSON.stringify({
 }, null, 2)
 
 const defaultForm = () => ({
-  name: '', description: '', type: 'network_url', url: '', content: '', cron_time: '',
+  name: '', description: '', type: 'network_url', url: '', content: '', cron_time: '', cron_detect: '',
   network_headers: [],
   epg_enabled: false, status: true,
   iptv: {
@@ -355,7 +391,7 @@ async function loadSources(showLoading = true) {
     sources.value = data || []
     
     // Check polling
-    const hasSyncing = sources.value.some(s => s.is_syncing)
+    const hasSyncing = sources.value.some(s => s.is_syncing || s.is_detecting)
     if (hasSyncing && !pollingTimer) {
       pollingTimer = setInterval(() => loadSources(false), 3000)
     } else if (!hasSyncing && pollingTimer) {
@@ -482,7 +518,7 @@ function showEdit(row) {
   Object.assign(form, {
     name: row.name, description: row.description || '', type: row.type, url: row.url, content: row.content,
     network_headers,
-    cron_time: row.cron_time, status: row.status,
+    cron_time: row.cron_time, cron_detect: row.cron_detect || '', status: row.status,
     iptv: iptvParsed,
   })
   dialogVisible.value = true
@@ -508,14 +544,14 @@ async function handleSubmit() {
   
   try {
     if (isEdit.value) {
-      const body = { name: form.name, description: form.description, url: form.url, content: form.content, headers: headersJson, cron_time: form.cron_time, status: form.status }
+      const body = { name: form.name, description: form.description, url: form.url, content: form.content, headers: headersJson, cron_time: form.cron_time, cron_detect: form.cron_detect, status: form.status }
       if (form.type === 'iptv') {
         body.iptv_config = buildIptvConfig()
       }
       await api.put(`/live-sources/${editId.value}`, body)
       ElMessage.success('更新成功')
     } else {
-      const body = { name: form.name, description: form.description, type: form.type, url: form.url, content: form.content, headers: headersJson, cron_time: form.cron_time, epg_enabled: form.epg_enabled }
+      const body = { name: form.name, description: form.description, type: form.type, url: form.url, content: form.content, headers: headersJson, cron_time: form.cron_time, cron_detect: form.cron_detect, epg_enabled: form.epg_enabled }
       if (form.type === 'iptv') {
         body.iptv_config = buildIptvConfig()
       }
@@ -549,10 +585,73 @@ async function triggerFetch(row) {
 
 async function showChannels(row) {
   try {
+    channelsSourceId.value = row.id
+    channelsDetecting.value = row.is_detecting || false
     const { data } = await api.get(`/live-sources/${row.id}/channels`)
     channels.value = data.channels || []
     channelsVisible.value = true
+
+    // Start polling if detecting
+    if (channelsDetecting.value) {
+      startDetectPolling()
+    }
   } catch {}
+}
+
+async function triggerDetect() {
+  if (!channelsSourceId.value) return
+  detectTriggering.value = true
+  try {
+    await api.post(`/live-sources/${channelsSourceId.value}/detect`)
+    ElMessage.success('已触发检测')
+    channelsDetecting.value = true
+    
+    // Reset local channels state so UI immediately shows loading state
+    channels.value.forEach(ch => ch.latency = null)
+    
+    startDetectPolling()
+    await loadSources(false)
+  } catch (e) {
+    if (e.response?.data?.error) {
+      ElMessage.error(e.response.data.error)
+    }
+  } finally {
+    detectTriggering.value = false
+  }
+}
+
+function startDetectPolling() {
+  if (detectPollingTimer) return
+  detectPollingTimer = setInterval(async () => {
+    if (!channelsSourceId.value || !channelsVisible.value) {
+      stopDetectPolling()
+      return
+    }
+    try {
+      // Check source detecting status
+      const sourceRes = await api.get(`/live-sources/${channelsSourceId.value}`)
+      const isDetecting = sourceRes.data.is_detecting || false
+
+      // Refresh channel data
+      const { data } = await api.get(`/live-sources/${channelsSourceId.value}/channels`)
+      channels.value = data.channels || []
+
+      if (!isDetecting) {
+        channelsDetecting.value = false
+        stopDetectPolling()
+        await loadSources(false)
+      }
+    } catch {
+      stopDetectPolling()
+    }
+  }, 3000)
+}
+
+function stopDetectPolling() {
+  if (detectPollingTimer) {
+    clearInterval(detectPollingTimer)
+    detectPollingTimer = null
+  }
 }
 
 function fillAuthExample() {

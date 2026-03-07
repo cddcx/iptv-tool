@@ -54,10 +54,12 @@ func main() {
 	// Define subdirectories
 	dbDir := filepath.Join(dataDir, "db")
 	logoDir := filepath.Join(dataDir, "logos")
+	detectDir := filepath.Join(dataDir, "detect")
 
 	// Ensure directories exist
 	os.MkdirAll(dbDir, 0755)
 	os.MkdirAll(logoDir, 0755)
+	os.MkdirAll(detectDir, 0755)
 
 	// Initialize database
 	dbPath := filepath.Join(dbDir, "iptv.db")
@@ -69,7 +71,7 @@ func main() {
 	auth.InitJWTSecret(*jwtSecret)
 
 	// Initialize and start scheduler
-	scheduler := task.NewScheduler()
+	scheduler := task.NewScheduler(dataDir)
 	if err := scheduler.Start(); err != nil {
 		logger.Fatalf("Failed to start scheduler", "error", err)
 	}
@@ -82,7 +84,7 @@ func main() {
 	}
 
 	// Setup and start HTTP server
-	router := api.SetupRouter(scheduler, logoDir, frontendFS)
+	router := api.SetupRouter(scheduler, logoDir, dataDir, frontendFS)
 
 	slog.Info("IPTV Tool v2 starting", "address", *addr)
 	if err := router.Run(*addr); err != nil {

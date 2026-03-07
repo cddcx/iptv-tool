@@ -13,7 +13,7 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router with all routes
-func SetupRouter(scheduler *task.Scheduler, logoDir string, frontendFS fs.FS) *gin.Engine {
+func SetupRouter(scheduler *task.Scheduler, logoDir string, dataDir string, frontendFS fs.FS) *gin.Engine {
 	r := gin.Default()
 
 	// --- Public routes (no auth required) ---
@@ -54,6 +54,7 @@ func SetupRouter(scheduler *task.Scheduler, logoDir string, frontendFS fs.FS) *g
 		authorized.PUT("/live-sources/:id", liveCtrl.Update)
 		authorized.DELETE("/live-sources/:id", liveCtrl.Delete)
 		authorized.POST("/live-sources/:id/trigger", liveCtrl.Trigger)
+		authorized.POST("/live-sources/:id/detect", liveCtrl.TriggerDetect)
 		authorized.GET("/live-sources/:id/channels", liveCtrl.GetChannels)
 
 		// EPG Sources CRUD
@@ -83,6 +84,12 @@ func SetupRouter(scheduler *task.Scheduler, logoDir string, frontendFS fs.FS) *g
 		authorized.POST("/rules", ruleCtrl.Create)
 		authorized.PUT("/rules/:id", ruleCtrl.Update)
 		authorized.DELETE("/rules/:id", ruleCtrl.Delete)
+
+		// Detection Settings
+		settingsCtrl := NewSettingsController(dataDir)
+		authorized.GET("/settings/detect", settingsCtrl.GetDetectSettings)
+		authorized.PUT("/settings/detect", settingsCtrl.UpdateDetectSettings)
+		authorized.POST("/settings/detect/ffmpeg", settingsCtrl.UploadFFmpeg)
 
 		// Publish Interfaces
 		publishCtrl := NewPublishController(scheduler)

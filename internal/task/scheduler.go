@@ -34,23 +34,27 @@ var CronTimeOptions = []map[string]string{
 
 // Scheduler manages all cron jobs for live sources and EPG sources
 type Scheduler struct {
-	cron        *cron.Cron
-	liveService *service.LiveSourceService
-	epgService  *service.EPGSourceService
+	cron          *cron.Cron
+	liveService   *service.LiveSourceService
+	epgService    *service.EPGSourceService
+	detectService *service.DetectService
 
-	mu          sync.Mutex
-	liveEntries map[uint]cron.EntryID // sourceID -> cron entry ID
-	epgEntries  map[uint]cron.EntryID // sourceID -> cron entry ID
+	mu            sync.Mutex
+	liveEntries   map[uint]cron.EntryID // sourceID -> cron entry ID
+	epgEntries    map[uint]cron.EntryID // sourceID -> cron entry ID
+	detectEntries map[uint]cron.EntryID // sourceID -> detect cron entry ID
 }
 
 // NewScheduler creates a new task scheduler
-func NewScheduler() *Scheduler {
+func NewScheduler(dataDir string) *Scheduler {
 	return &Scheduler{
-		cron:        cron.New(),
-		liveService: service.NewLiveSourceService(),
-		epgService:  service.NewEPGSourceService(),
-		liveEntries: make(map[uint]cron.EntryID),
-		epgEntries:  make(map[uint]cron.EntryID),
+		cron:          cron.New(),
+		liveService:   service.NewLiveSourceService(),
+		epgService:    service.NewEPGSourceService(),
+		detectService: service.NewDetectService(dataDir),
+		liveEntries:   make(map[uint]cron.EntryID),
+		epgEntries:    make(map[uint]cron.EntryID),
+		detectEntries: make(map[uint]cron.EntryID),
 	}
 }
 
@@ -92,8 +96,20 @@ func (s *Scheduler) Start() error {
 		}
 	}
 
+	// Load all enabled live sources with cron_detect and register their detect cron jobs
+	var detectSources []model.LiveSource
+	if err := model.DB.Where("status = ? AND cron_detect != ''", true).Find(&detectSources).Error; err != nil {
+		return fmt.Errorf("failed to load live sources for detection: %w", err)
+	}
+
+	for _, src := range detectSources {
+		if err := s.AddDetectTask(src.ID, src.CronDetect); err != nil {
+			slog.Warn("Failed to schedule detect task", "name", src.Name, "id", src.ID, "error", err)
+		}
+	}
+
 	s.cron.Start()
-	slog.Info("Task scheduler started", "live_tasks", len(s.liveEntries), "epg_tasks", len(s.epgEntries))
+	slog.Info("Task scheduler started", "live_tasks", len(s.liveEntries), "epg_tasks", len(s.epgEntries), "detect_tasks", len(s.detectEntries))
 	return nil
 }
 
@@ -208,6 +224,66 @@ func (s *Scheduler) TriggerEPGSourceNow(sourceID uint) {
 		slog.Info("Manual trigger: fetching EPG source", "id", sourceID)
 		if err := s.epgService.FetchAndUpdate(sourceID); err != nil {
 			slog.Error("Manual trigger: failed to fetch EPG source", "id", sourceID, "error", err)
+		}
+	}()
+}
+
+// AddDetectTask adds or updates a cron job for channel detection on a live source
+func (s *Scheduler) AddDetectTask(sourceID uint, cronTime string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Remove existing entry if any
+	if entryID, exists := s.detectEntries[sourceID]; exists {
+		s.cron.Remove(entryID)
+		delete(s.detectEntries, sourceID)
+	}
+
+	cronExpr, ok := CronTimeMap[cronTime]
+	if !ok {
+		return fmt.Errorf("invalid cron time: %s", cronTime)
+	}
+
+	id := sourceID // Capture for closure
+	entryID, err := s.cron.AddFunc(cronExpr, func() {
+		slog.Info("Cron: detecting channels for live source", "id", id)
+		if err := s.detectService.DetectChannels(id, false); err != nil {
+			slog.Error("Cron: failed to detect channels", "id", id, "error", err)
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add detect cron job: %w", err)
+	}
+
+	s.detectEntries[sourceID] = entryID
+	slog.Info("Scheduled detect task", "id", sourceID, "interval", cronTime, "cron", cronExpr)
+	return nil
+}
+
+// RemoveDetectTask removes a cron job for channel detection
+func (s *Scheduler) RemoveDetectTask(sourceID uint) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if entryID, exists := s.detectEntries[sourceID]; exists {
+		s.cron.Remove(entryID)
+		delete(s.detectEntries, sourceID)
+		slog.Info("Removed detect task", "id", sourceID)
+	}
+}
+
+// CheckFFmpeg checks whether the ffmpeg executable is available
+func (s *Scheduler) CheckFFmpeg() error {
+	_, err := s.detectService.GetFFmpegPath()
+	return err
+}
+
+// TriggerDetectNow manually triggers channel detection immediately
+func (s *Scheduler) TriggerDetectNow(sourceID uint) {
+	go func() {
+		slog.Info("Manual trigger: detecting channels for live source", "id", sourceID)
+		if err := s.detectService.DetectChannels(sourceID, true); err != nil {
+			slog.Error("Manual trigger: failed to detect channels", "id", sourceID, "error", err)
 		}
 	}()
 }
