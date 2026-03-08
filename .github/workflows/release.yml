@@ -164,6 +164,7 @@ jobs:
         run: |
           set -e
           VERSION="${{ steps.version.outputs.VERSION }}"
+          RELEASE_DATE=$(date -u +%Y-%m-%d)
 
           # Find the previous tag
           PREV_TAG=$(git tag --sort=-version:refname | grep '^v' | sed -n '2p' || true)
@@ -179,32 +180,37 @@ jobs:
           FIX_COMMITS=$(git log ${RANGE} --pretty=format:"- %s (%h)" --grep="^fix" --extended-regexp || true)
           PERF_COMMITS=$(git log ${RANGE} --pretty=format:"- %s (%h)" --grep="^perf" --extended-regexp || true)
 
-          # Build changelog
-          CHANGELOG="# ${VERSION}\n"
+          # Build changelog entry for this version
+          ENTRY="# ${VERSION} (${RELEASE_DATE})\n"
 
           if [[ -n "${FEAT_COMMITS}" ]]; then
-            CHANGELOG="${CHANGELOG}\n## ✨ Features\n\n${FEAT_COMMITS}\n"
+            ENTRY="${ENTRY}\n## ✨ Features\n\n${FEAT_COMMITS}\n"
           fi
           if [[ -n "${FIX_COMMITS}" ]]; then
-            CHANGELOG="${CHANGELOG}\n## 🐛 Bug Fixes\n\n${FIX_COMMITS}\n"
+            ENTRY="${ENTRY}\n## 🐛 Bug Fixes\n\n${FIX_COMMITS}\n"
           fi
           if [[ -n "${PERF_COMMITS}" ]]; then
-            CHANGELOG="${CHANGELOG}\n## ⚡ Performance\n\n${PERF_COMMITS}\n"
+            ENTRY="${ENTRY}\n## ⚡ Performance\n\n${PERF_COMMITS}\n"
           fi
 
           # If no conventional commits found
           if [[ -z "${FEAT_COMMITS}" && -z "${FIX_COMMITS}" && -z "${PERF_COMMITS}" ]]; then
-            CHANGELOG="${CHANGELOG}\nNo notable changes in this release.\n"
+            ENTRY="${ENTRY}\nNo notable changes in this release.\n"
           fi
 
-          # Write CHANGELOG.md
-          echo -e "${CHANGELOG}" > CHANGELOG.md
+          # Prepend new entry to existing CHANGELOG.md (preserve history)
+          if [[ -f CHANGELOG.md ]]; then
+            EXISTING=$(cat CHANGELOG.md)
+            echo -e "${ENTRY}\n${EXISTING}" > CHANGELOG.md
+          else
+            echo -e "${ENTRY}" > CHANGELOG.md
+          fi
           cat CHANGELOG.md
 
-          # Export for release body (using delimiter for multiline)
+          # Export for release body (only current version, not full history)
           {
             echo "BODY<<CHANGELOG_EOF"
-            echo -e "${CHANGELOG}"
+            echo -e "${ENTRY}"
             echo "CHANGELOG_EOF"
           } >> "$GITHUB_OUTPUT"
 
