@@ -340,6 +340,17 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 	// Reload to get updated fields
 	model.DB.First(&source, uint(id))
 
+	// Auto-update linked IPTV EPG source if LiveSource is IPTV type and IPTVConfig is updated
+	if source.Type == model.LiveSourceTypeIPTV && req.IPTVConfig != nil {
+		if err := model.DB.Model(&model.EPGSource{}).
+			Where("live_source_id = ? AND type = ?", source.ID, model.EPGSourceTypeIPTV).
+			Update("iptv_config", string(*req.IPTVConfig)).Error; err != nil {
+			slog.Error("Failed to auto-update linked EPG source IPTV config", "error", err, "live_source_id", source.ID)
+		} else {
+			slog.Info("Auto-updated linked EPG source IPTV config", "live_source_id", source.ID)
+		}
+	}
+
 	// Auto-create EPG source from x-tvg-url if requested during update
 	if req.AutoCreateEPG != nil && *req.AutoCreateEPG {
 		if source.Type == model.LiveSourceTypeNetworkURL || source.Type == model.LiveSourceTypeNetworkManual {
