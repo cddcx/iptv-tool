@@ -300,7 +300,7 @@ func (s *Scheduler) RemoveDetectTask(sourceID uint) {
 
 // CheckFFprobe checks whether the ffprobe executable is available
 func (s *Scheduler) CheckFFprobe() error {
-	_, err := s.detectService.GetFFprobePath()
+	_, _, err := s.detectService.GetFFprobePath()
 	return err
 }
 

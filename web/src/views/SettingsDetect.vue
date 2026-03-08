@@ -9,8 +9,12 @@
 
       <el-descriptions :column="1" border>
         <el-descriptions-item label="当前版本">
-          <span v-if="ffprobeVersion" style="color: #67c23a">{{ ffprobeVersion }}</span>
-          <span v-else style="color: #909399">未上传</span>
+          <span v-if="ffprobeVersion" style="color: #67c23a">
+            {{ ffprobeVersion }}
+            <el-tag v-if="ffprobeSource === 'uploaded'" size="small" type="success" style="margin-left: 8px">用户上传优先</el-tag>
+            <el-tag v-else-if="ffprobeSource === 'system'" size="small" type="info" style="margin-left: 8px">系统内置</el-tag>
+          </span>
+          <span v-else style="color: #909399">未配置或系统未安装</span>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -63,6 +67,7 @@ import { ElMessage } from 'element-plus'
 import api from '../api'
 
 const ffprobeVersion = ref('')
+const ffprobeSource = ref('')
 const uploading = ref(false)
 const saving = ref(false)
 const uploadRef = ref()
@@ -88,6 +93,7 @@ async function loadSettings() {
     configForm.concurrency = data.concurrency || 10
     configForm.timeout = data.timeout || 5
     ffprobeVersion.value = data.ffprobe_version || ''
+    ffprobeSource.value = data.ffprobe_source || ''
   } catch {}
 }
 
@@ -100,6 +106,7 @@ function onUploadSuccess(response) {
   uploading.value = false
   if (response.ffprobe_version) {
     ffprobeVersion.value = response.ffprobe_version
+    ffprobeSource.value = response.ffprobe_source || 'uploaded'
   }
   ElMessage.success(response.message || 'ffprobe 上传成功')
 }

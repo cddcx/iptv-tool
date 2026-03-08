@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -30,27 +31,46 @@ func NewDetectService(dataDir string) *DetectService {
 	return &DetectService{dataDir: dataDir}
 }
 
-// GetFFprobePath returns the path to the ffprobe executable, or error if not found
-func (s *DetectService) GetFFprobePath() (string, error) {
+// GetFFprobePath returns the path to the ffprobe executable and its source ("uploaded" or "system"), or error if not found
+func (s *DetectService) GetFFprobePath() (string, string, error) {
 	name := "ffprobe"
 	if runtime.GOOS == "windows" {
 		name = "ffprobe.exe"
 	}
-	ffprobePath := filepath.Join(s.dataDir, "detect", name)
+	uploadedPath := filepath.Join(s.dataDir, "detect", name)
 
-	// Check existence by trying to run
-	cmd := exec.Command(ffprobePath, "-version")
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("ffprobe 可执行文件未找到或无法运行: %w", err)
+	// 1. Try uploaded version first
+	if stat, err := os.Stat(uploadedPath); err == nil && !stat.IsDir() {
+		cmd := exec.Command(uploadedPath, "-version")
+		if err := cmd.Run(); err == nil {
+			return uploadedPath, "uploaded", nil
+		} else {
+			// Uploaded file exists but cannot run
+			errMsg := err.Error()
+			if runtime.GOOS == "linux" && strings.Contains(errMsg, "no such file or directory") {
+				return "", "", fmt.Errorf("已上传的文件存在但无法执行 (可能原因: 系统架构不符，或系统缺少该程序所需的动态链接库，例如在 Alpine/Docker 环境中运行了基于 glibc 动态编译的程序。请查阅系统环境，并尝试上传静态编译版本 - Static Build 的 ffprobe): %w", err)
+			}
+			return "", "", fmt.Errorf("已上传的 ffprobe 可执行文件运行失败: %w", err)
+		}
 	}
-	return ffprobePath, nil
+
+	// 2. Try system version if uploaded doesn't exist
+	systemPath, err := exec.LookPath(name)
+	if err == nil {
+		cmd := exec.Command(systemPath, "-version")
+		if err := cmd.Run(); err == nil {
+			return systemPath, "system", nil
+		}
+	}
+
+	return "", "", fmt.Errorf("系统未安装 ffprobe 且未上传可执行文件，请在设置中上传")
 }
 
-// GetFFprobeVersion returns the version string of the installed ffprobe
-func (s *DetectService) GetFFprobeVersion() (string, error) {
-	ffprobePath, err := s.GetFFprobePath()
+// GetFFprobeVersion returns the version string of the installed ffprobe and its source ("uploaded" or "system")
+func (s *DetectService) GetFFprobeVersion() (string, string, error) {
+	ffprobePath, source, err := s.GetFFprobePath()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -59,15 +79,15 @@ func (s *DetectService) GetFFprobeVersion() (string, error) {
 	cmd := exec.CommandContext(ctx, ffprobePath, "-version")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("获取 ffprobe 版本失败: %w", err)
+		return "", source, fmt.Errorf("获取 ffprobe 版本失败: %w", err)
 	}
 
 	// Parse first line: "ffprobe version N-xxxxx-gxxxxxxx Copyright ..."
 	lines := strings.Split(string(output), "\n")
 	if len(lines) > 0 {
-		return strings.TrimSpace(lines[0]), nil
+		return strings.TrimSpace(lines[0]), source, nil
 	}
-	return "unknown", nil
+	return "unknown", source, nil
 }
 
 // getDetectConfig reads concurrency and timeout settings from the database
@@ -124,7 +144,7 @@ func (s *DetectService) DetectChannels(sourceID uint, manual bool) error {
 	}
 
 	// Get ffprobe path
-	ffprobePath, err := s.GetFFprobePath()
+	ffprobePath, _, err := s.GetFFprobePath()
 	if err != nil {
 		return err
 	}

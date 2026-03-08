@@ -48,8 +48,10 @@ func (sc *SettingsController) GetDetectSettings(c *gin.Context) {
 
 	// Get ffprobe version if available
 	ffprobeVersion := ""
-	if ver, err := sc.detectService.GetFFprobeVersion(); err == nil {
+	ffprobeSource := ""
+	if ver, source, err := sc.detectService.GetFFprobeVersion(); err == nil {
 		ffprobeVersion = ver
+		ffprobeSource = source
 	}
 
 	concurrencyInt, _ := strconv.Atoi(concurrency)
@@ -59,6 +61,7 @@ func (sc *SettingsController) GetDetectSettings(c *gin.Context) {
 		"concurrency":     concurrencyInt,
 		"timeout":         timeoutInt,
 		"ffprobe_version": ffprobeVersion,
+		"ffprobe_source":  ffprobeSource,
 	})
 }
 
@@ -133,17 +136,22 @@ func (sc *SettingsController) UploadFFprobe(c *gin.Context) {
 	}
 
 	// Verify the uploaded file is actually ffprobe
-	version, err := sc.detectService.GetFFprobeVersion()
-	if err != nil {
+	version, source, err := sc.detectService.GetFFprobeVersion()
+	if err != nil || source != "uploaded" {
 		// Remove invalid file
 		os.Remove(targetPath)
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("上传的文件不是有效的 ffprobe 可执行文件: %s", err.Error())})
+		errMsg := "未能识别到可用文件"
+		if err != nil {
+			errMsg = err.Error()
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("上传的文件不是有效的 ffprobe 可执行文件: %s", errMsg)})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":         "ffprobe 上传成功",
 		"ffprobe_version": version,
+		"ffprobe_source":  source,
 	})
 }
 
