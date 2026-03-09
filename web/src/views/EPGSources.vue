@@ -144,18 +144,36 @@
       </div>
 
       <!-- Level 1: Channel list -->
-      <el-table v-if="drillLevel === 1" :data="epgChannels" v-loading="drillLoading" max-height="400" border stripe size="small">
-        <el-table-column prop="channel" label="频道ID" width="180" show-overflow-tooltip />
-        <el-table-column prop="channel_name" label="频道名称" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.channel_name || row.channel }}</template>
-        </el-table-column>
-        <el-table-column prop="count" label="节目数" width="100" />
-        <el-table-column label="操作" width="100" align="center">
-          <template #default="{ row }">
-            <el-button size="small" type="primary" link @click="drillToDate(row.channel)">查看</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div v-if="drillLevel === 1">
+        <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center">
+          <p style="margin: 0; color: #909399; font-size: 13px">
+            共 {{ filteredEpgChannels.length }} 个频道 {{ drillSearch ? '(已过滤)' : '' }}
+          </p>
+          <el-input v-model="drillSearch" placeholder="搜索频道ID或名称" style="width: 200px" size="small" clearable @input="handleSearchChange" />
+        </div>
+        <el-table :data="paginatedEpgChannels" v-loading="drillLoading" max-height="400" border stripe size="small">
+          <el-table-column prop="channel" label="频道ID" width="180" show-overflow-tooltip />
+          <el-table-column prop="channel_name" label="频道名称" min-width="150" show-overflow-tooltip>
+            <template #default="{ row }">{{ row.channel_name || row.channel }}</template>
+          </el-table-column>
+          <el-table-column prop="count" label="节目数" width="100" />
+          <el-table-column label="操作" width="100" align="center">
+            <template #default="{ row }">
+              <el-button size="small" type="primary" link @click="drillToDate(row.channel)">查看</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end">
+          <el-pagination
+            v-model:current-page="drillCurrentPage"
+            v-model:page-size="drillPageSize"
+            :page-sizes="[50, 100, 200, 500]"
+            layout="total, sizes, prev, pager, next"
+            :total="filteredEpgChannels.length"
+            size="small"
+          />
+        </div>
+      </div>
 
       <!-- Level 2: Date list -->
       <el-table v-if="drillLevel === 2" :data="epgDates" v-loading="drillLoading" max-height="400" border stripe size="small">
@@ -181,9 +199,6 @@
         </el-table-column>
       </el-table>
 
-      <p v-if="drillLevel === 1" style="margin: 12px 0 0; color: #909399; font-size: 13px">
-        共 {{ epgChannels.length }} 个频道
-      </p>
     </el-dialog>
   </div>
 </template>
@@ -222,6 +237,33 @@ const drillLoading = ref(false)
 const epgChannels = ref([])
 const epgDates = ref([])
 const epgPrograms = ref([])
+
+// Added pagination & search state
+const drillSearch = ref('')
+const drillCurrentPage = ref(1)
+const drillPageSize = ref(50)
+
+const filteredEpgChannels = computed(() => {
+  let result = epgChannels.value
+  if (drillSearch.value) {
+    const q = drillSearch.value.toLowerCase()
+    result = result.filter(c => 
+      (c.channel && c.channel.toLowerCase().includes(q)) || 
+      (c.channel_name && c.channel_name.toLowerCase().includes(q))
+    )
+  }
+  return result
+})
+
+const paginatedEpgChannels = computed(() => {
+  const start = (drillCurrentPage.value - 1) * drillPageSize.value
+  const end = start + drillPageSize.value
+  return filteredEpgChannels.value.slice(start, end)
+})
+
+function handleSearchChange() {
+  drillCurrentPage.value = 1
+}
 
 const defaultForm = () => ({
   name: '', description: '', type: 'network_xmltv', url: '', cron_time: '',
@@ -385,6 +427,8 @@ async function showPrograms(row) {
   drillLevel.value = 1
   drillChannel.value = ''
   drillDate.value = ''
+  drillSearch.value = ''
+  drillCurrentPage.value = 1
   programsVisible.value = true
   await loadEpgChannels()
 }
