@@ -150,9 +150,9 @@ func (s *DetectService) DetectChannels(sourceID uint, manual bool) error {
 	}
 
 	// Mark as detecting
-	model.DB.Model(&model.LiveSource{}).Where("id = ?", sourceID).Update("is_detecting", true)
+	model.DB.Model(&model.LiveSource{}).Where("id = ?", sourceID).UpdateColumn("is_detecting", true)
 	defer func() {
-		model.DB.Model(&model.LiveSource{}).Where("id = ?", sourceID).Update("is_detecting", false)
+		model.DB.Model(&model.LiveSource{}).Where("id = ?", sourceID).UpdateColumn("is_detecting", false)
 	}()
 
 	// Reset latency, video_codec, video_resolution, and detected_at for all channels in this source before detecting
@@ -252,12 +252,18 @@ func (s *DetectService) detectSingleChannel(ffprobePath string, url string, time
 
 	start := time.Now()
 
+	// Replace igmp:// with rtp:// for ffprobe compatibility
+	probeURL := url
+	if strings.HasPrefix(probeURL, "igmp://") {
+		probeURL = "rtp://" + strings.TrimPrefix(probeURL, "igmp://")
+	}
+
 	// ffprobe -v quiet -print_format json -show_streams -i <url>
 	cmd := exec.CommandContext(ctx, ffprobePath,
 		"-v", "quiet",
 		"-print_format", "json",
 		"-show_streams",
-		"-i", url,
+		"-i", probeURL,
 	)
 
 	output, runErr := cmd.Output()

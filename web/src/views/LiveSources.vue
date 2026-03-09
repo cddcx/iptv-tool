@@ -35,10 +35,6 @@
             <el-icon class="is-loading" :size="16"><Loading /></el-icon>
             <span>同步中...</span>
           </div>
-          <div v-else-if="row.is_detecting" style="display: flex; align-items: center; gap: 6px; color: #e6a23c">
-            <el-icon class="is-loading" :size="16"><Loading /></el-icon>
-            <span>检测中...</span>
-          </div>
           <div v-else-if="row.last_fetched_at" style="display: flex; align-items: center; gap: 6px">
             <el-tooltip v-if="row.last_error" :content="row.last_error" placement="top" :show-after="300">
               <el-icon color="#f56c6c" :size="16" style="cursor: pointer; flex-shrink: 0"><CircleCloseFilled /></el-icon>
@@ -242,12 +238,20 @@
     <!-- Channels Dialog -->
     <el-dialog v-model="channelsVisible" title="频道列表" width="1100px" destroy-on-close :close-on-click-modal="false">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-        <span style="color: #909399">共 {{ channels.length }} 个频道</span>
-        <el-button type="warning" size="small" @click="triggerDetect" :loading="detectTriggering" :disabled="channelsDetecting">
-          {{ channelsDetecting ? '检测中...' : '检测' }}
-        </el-button>
+        <span style="color: #909399; font-size: 13px">
+          共 {{ filteredChannels.length }} 个频道 {{ channelsSearch ? '(已过滤)' : '' }}
+          <span v-if="channelsDetecting" style="margin-left: 12px; color: #e6a23c">
+            [检测进度: {{ detectedCount }} / {{ channels.length }}]
+          </span>
+        </span>
+        <div style="display: flex; gap: 12px; align-items: center">
+          <el-input v-model="channelsSearch" placeholder="搜索频道ID或名称" style="width: 200px" size="small" clearable @input="handleSearchChange" />
+          <el-button type="warning" size="small" @click="triggerDetect" :loading="detectTriggering" :disabled="channelsDetecting">
+            {{ channelsDetecting ? '检测中...' : '检测' }}
+          </el-button>
+        </div>
       </div>
-      <el-table :data="channels" max-height="400" border stripe size="small" style="user-select: text">
+      <el-table :data="paginatedChannels" max-height="400" border stripe size="small" style="user-select: text">
         <el-table-column prop="tvg_id" label="频道ID" width="120" show-overflow-tooltip />
         <el-table-column prop="name" label="频道名" width="130" />
         <el-table-column prop="group" label="分组" width="100" />
@@ -295,12 +299,21 @@
           </template>
         </el-table-column>
       </el-table>
+      <div style="margin-top: 16px; display: flex; justify-content: flex-end">
+        <el-pagination
+          v-model:current-page="channelsPage"
+          v-model:page-size="channelsPageSize"
+          :page-sizes="[50, 100, 200, 500]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="filteredChannels.length"
+        />
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { List, Refresh, Edit, Delete, Plus, SuccessFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
 import api from '../api'
@@ -317,7 +330,36 @@ onUnmounted(() => {
 const dialogVisible = ref(false)
 const channelsVisible = ref(false)
 const channels = ref([])
+const channelsPage = ref(1)
+const channelsPageSize = ref(100)
 const channelsSourceId = ref(null)
+const channelsSearch = ref('')
+
+const filteredChannels = computed(() => {
+  let result = channels.value
+  if (channelsSearch.value) {
+    const q = channelsSearch.value.toLowerCase()
+    result = result.filter(ch => 
+      (ch.tvg_id && ch.tvg_id.toLowerCase().includes(q)) || 
+      (ch.name && ch.name.toLowerCase().includes(q))
+    )
+  }
+  return result
+})
+
+const paginatedChannels = computed(() => {
+  const start = (channelsPage.value - 1) * channelsPageSize.value
+  const end = start + channelsPageSize.value
+  return filteredChannels.value.slice(start, end)
+})
+
+function handleSearchChange() {
+  channelsPage.value = 1
+}
+
+const detectedCount = computed(() => {
+  return channels.value.filter(ch => ch.latency !== null && ch.latency !== undefined).length
+})
 const channelsDetecting = ref(false)
 const detectTriggering = ref(false)
 let detectPollingTimer = null
@@ -419,7 +461,7 @@ async function loadSources(showLoading = true) {
     sources.value = data || []
     
     // Check polling
-    const hasSyncing = sources.value.some(s => s.is_syncing || s.is_detecting)
+    const hasSyncing = sources.value.some(s => s.is_syncing)
     if (hasSyncing && !pollingTimer) {
       pollingTimer = setInterval(() => loadSources(false), 3000)
     } else if (!hasSyncing && pollingTimer) {
@@ -617,9 +659,12 @@ async function triggerFetch(row) {
 async function showChannels(row) {
   try {
     channelsSourceId.value = row.id
-    channelsDetecting.value = row.is_detecting || false
+    const sourceRes = await api.get(`/live-sources/${row.id}`)
+    channelsDetecting.value = sourceRes.data.is_detecting || false
     const { data } = await api.get(`/live-sources/${row.id}/channels`)
     channels.value = data.channels || []
+    channelsPage.value = 1
+    channelsSearch.value = ''
     channelsVisible.value = true
 
     // Start polling if detecting
