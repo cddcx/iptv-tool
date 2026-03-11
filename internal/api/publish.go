@@ -10,6 +10,7 @@ import (
 	"iptv-tool-v2/internal/model"
 	"iptv-tool-v2/internal/publish"
 	"iptv-tool-v2/internal/task"
+	"iptv-tool-v2/pkg/i18n"
 )
 
 // PublishController handles CRUD for publish interfaces
@@ -38,13 +39,13 @@ func (pc *PublishController) ListInterfaces(c *gin.Context) {
 func (pc *PublishController) GetInterface(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var iface model.PublishInterface
 	if err := model.DB.First(&iface, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该发布接口"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.publish_not_found")})
 		return
 	}
 	c.JSON(http.StatusOK, iface)
@@ -80,11 +81,11 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 
 	// Validate format based on type
 	if req.Type == "live" && (req.Format != model.PublishFormatM3U && req.Format != model.PublishFormatTXT) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "直播类型只支持 m3u 和 txt 格式"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.live_format_invalid")})
 		return
 	}
 	if req.Type == "epg" && (req.Format != model.PublishFormatXMLTV && req.Format != model.PublishFormatDIYP) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "EPG类型只支持 xmltv 和 diyp JSON 格式"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.epg_format_invalid")})
 		return
 	}
 
@@ -92,7 +93,7 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 	var existingName int64
 	model.DB.Model(&model.PublishInterface{}).Where("name = ?", req.Name).Count(&existingName)
 	if existingName > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "该接口名称已存在，请换一个名称"})
+		c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.interface_name_exists")})
 		return
 	}
 
@@ -100,7 +101,7 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 	var existing int64
 	model.DB.Model(&model.PublishInterface{}).Where("path = ? AND type = ?", req.Path, req.Type).Count(&existing)
 	if existing > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "该路径已存在"})
+		c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.path_exists")})
 		return
 	}
 
@@ -156,13 +157,13 @@ type UpdateInterfaceRequest struct {
 func (pc *PublishController) UpdateInterface(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var iface model.PublishInterface
 	if err := model.DB.First(&iface, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该发布接口"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.publish_not_found")})
 		return
 	}
 
@@ -177,7 +178,7 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 		var existingName int64
 		model.DB.Model(&model.PublishInterface{}).Where("name = ? AND id != ?", *req.Name, id).Count(&existingName)
 		if existingName > 0 {
-			c.JSON(http.StatusConflict, gin.H{"error": "该接口名称已存在，请换一个名称"})
+			c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.interface_name_exists")})
 			return
 		}
 		updates["name"] = *req.Name
@@ -192,7 +193,7 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 		interfaceType := iface.Type // Default to existing type
 		model.DB.Model(&model.PublishInterface{}).Where("path = ? AND type = ? AND id != ?", *req.Path, interfaceType, id).Count(&existing)
 		if existing > 0 {
-			c.JSON(http.StatusConflict, gin.H{"error": "该路径已存在"})
+			c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.path_exists")})
 			return
 		}
 		updates["path"] = *req.Path
@@ -251,7 +252,7 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 func (pc *PublishController) DeleteInterface(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
@@ -261,13 +262,21 @@ func (pc *PublishController) DeleteInterface(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "发布接口已删除"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.publish_deleted")})
 }
 
 // GetCronOptions returns the available cron time options for frontend dropdowns
 // GET /api/settings/cron-options
 func GetCronOptions(c *gin.Context) {
-	c.JSON(http.StatusOK, task.CronTimeOptions)
+	lang := i18n.Lang(c)
+	options := make([]map[string]string, len(task.CronTimeOptions))
+	for idx, opt := range task.CronTimeOptions {
+		options[idx] = map[string]string{
+			"value": opt["value"],
+			"label": i18n.T(lang, opt["label"]),
+		}
+	}
+	c.JSON(http.StatusOK, options)
 }
 
 // PreviewRequest is the request body for previewing the publish output

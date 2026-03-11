@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -15,6 +14,7 @@ import (
 	"iptv-tool-v2/internal/model"
 	"iptv-tool-v2/internal/service"
 	"iptv-tool-v2/internal/task"
+	"iptv-tool-v2/pkg/i18n"
 	"iptv-tool-v2/pkg/utils"
 )
 
@@ -64,13 +64,13 @@ func (lc *LiveSourceController) List(c *gin.Context) {
 func (lc *LiveSourceController) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var source model.LiveSource
 	if err := model.DB.First(&source, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该直播源"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.live_source_not_found")})
 		return
 	}
 	c.JSON(http.StatusOK, source)
@@ -103,21 +103,21 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 	var existing int64
 	model.DB.Model(&model.LiveSource{}).Where("name = ?", req.Name).Count(&existing)
 	if existing > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "该名称已存在，请换一个名称"})
+		c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.name_exists")})
 		return
 	}
 
 	// Validate cron_time for non-manual sources
 	if req.Type != model.LiveSourceTypeNetworkManual && req.CronTime != "" {
 		if !task.ValidateCronTime(req.CronTime) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时刷新表达式"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_cron_refresh")})
 			return
 		}
 	}
 	// Validate cron_detect
 	if req.CronDetect != "" {
 		if !task.ValidateCronTime(req.CronDetect) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时检测表达式"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_cron_detect")})
 			return
 		}
 	}
@@ -131,7 +131,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 	switch req.Type {
 	case model.LiveSourceTypeNetworkURL:
 		if req.URL == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "网络链接类型需要提供URL"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.url_required_network")})
 			return
 		}
 		var err error
@@ -141,7 +141,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		}
 	case model.LiveSourceTypeNetworkManual:
 		if req.Content == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "手动输入类型需要提供内容"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.content_required_manual")})
 			return
 		}
 		var err error
@@ -151,7 +151,7 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		}
 	case model.LiveSourceTypeIPTV:
 		if len(req.IPTVConfig) == 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "IPTV类型需要提供IPTV配置"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.iptv_config_required")})
 			return
 		}
 	}
@@ -267,13 +267,13 @@ type UpdateLiveSourceRequest struct {
 func (lc *LiveSourceController) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var source model.LiveSource
 	if err := model.DB.First(&source, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该直播源"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.live_source_not_found")})
 		return
 	}
 
@@ -289,7 +289,7 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 		var existing int64
 		model.DB.Model(&model.LiveSource{}).Where("name = ? AND id != ?", *req.Name, id).Count(&existing)
 		if existing > 0 {
-			c.JSON(http.StatusConflict, gin.H{"error": "该名称已存在，请换一个名称"})
+			c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.name_exists")})
 			return
 		}
 		updates["name"] = *req.Name
@@ -317,7 +317,7 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 			updates["cron_time"] = "" // Force no cron for manual sources
 		} else {
 			if *req.CronTime != "" && !task.ValidateCronTime(*req.CronTime) {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时刷新表达式"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_cron_refresh")})
 				return
 			}
 			updates["cron_time"] = *req.CronTime
@@ -325,7 +325,7 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 	}
 	if req.CronDetect != nil {
 		if *req.CronDetect != "" && !task.ValidateCronTime(*req.CronDetect) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的定时检测表达式"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_cron_detect")})
 			return
 		}
 		updates["cron_detect"] = *req.CronDetect
@@ -408,7 +408,7 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 func (lc *LiveSourceController) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
@@ -430,7 +430,7 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 				continue
 			}
 			if uint(refID) == sourceID {
-				c.JSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("该直播源正被发布接口「%s」引用，请先移除引用后再删除", pi.Name)})
+				c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.live_ref_publish", pi.Name)})
 				return
 			}
 		}
@@ -453,7 +453,7 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 				}
 				for _, rID := range strings.Split(pi.SourceIDs, ",") {
 					if strings.TrimSpace(rID) == epgIDStr {
-						c.JSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("该直播源关联的EPG源正被发布接口「%s」引用，请先移除EPG接口的引用后再删除直播源", pi.Name)})
+						c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.live_epg_ref_publish", pi.Name)})
 						return
 					}
 				}
@@ -484,7 +484,7 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "直播源已删除"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.live_source_deleted")})
 }
 
 // Trigger manually triggers a fetch for a live source
@@ -492,14 +492,14 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 func (lc *LiveSourceController) Trigger(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	model.DB.Model(&model.LiveSource{}).Where("id = ?", uint(id)).Update("is_syncing", true)
 
 	lc.scheduler.TriggerLiveSourceNow(uint(id))
-	c.JSON(http.StatusOK, gin.H{"message": "已触发抓取"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.trigger_fetch")})
 }
 
 // GetChannels returns parsed channels for a live source
@@ -507,7 +507,7 @@ func (lc *LiveSourceController) Trigger(c *gin.Context) {
 func (lc *LiveSourceController) GetChannels(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
@@ -535,18 +535,18 @@ func (lc *LiveSourceController) GetChannels(c *gin.Context) {
 func (lc *LiveSourceController) TriggerDetect(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	// Check if ffprobe is available before triggering detection
 	if err := lc.scheduler.CheckFFprobe(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请先在系统设置中上传 ffprobe 文件"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.no_ffprobe")})
 		return
 	}
 
 	lc.scheduler.TriggerDetectNow(uint(id))
-	c.JSON(http.StatusOK, gin.H{"message": "已触发检测"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.trigger_detect")})
 }
 
 // UnlinkedIPTV returns IPTV live sources that do NOT have an associated EPG source

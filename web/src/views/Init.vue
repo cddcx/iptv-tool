@@ -1,26 +1,40 @@
 <template>
   <div class="login-wrapper">
     <div class="login-bg">
+      <div class="lang-switch">
+        <el-dropdown @command="switchLanguage">
+          <span class="lang-dropdown">
+            {{ currentLocale === 'zh' ? '中文' : 'EN' }}
+            <el-icon style="margin-left: 4px"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="zh">中文</el-dropdown-item>
+              <el-dropdown-item command="en">English</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
       <div class="login-card">
         <div class="login-header">
           <div class="login-logo">
             <el-icon :size="36" color="#409eff"><Setting /></el-icon>
           </div>
           <h2 class="login-title">IPTV Tool</h2>
-          <p class="login-subtitle">系统首次运行初始化</p>
+          <p class="login-subtitle">{{ $t('init.system_init') }}</p>
         </div>
         <el-form :model="form" :rules="rules" ref="formRef" size="large">
           <el-form-item prop="username">
-            <el-input v-model="form.username" placeholder="请设置管理员用户名 (至少3位)" :prefix-icon="User" />
+            <el-input v-model="form.username" :placeholder="$t('init.username_placeholder')" :prefix-icon="User" />
           </el-form-item>
           <el-form-item prop="password">
-            <el-input v-model="form.password" type="password" placeholder="请设置登录密码 (至少6位)" :prefix-icon="Lock" show-password />
+            <el-input v-model="form.password" type="password" :placeholder="$t('init.password_placeholder')" :prefix-icon="Lock" show-password />
           </el-form-item>
           <el-form-item prop="confirmPassword">
-            <el-input v-model="form.confirmPassword" type="password" placeholder="请再次确认密码" :prefix-icon="Lock" show-password @keyup.enter="handleInit" />
+            <el-input v-model="form.confirmPassword" type="password" :placeholder="$t('init.confirm_password_placeholder')" :prefix-icon="Lock" show-password @keyup.enter="handleInit" />
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="handleInit" :loading="loading" style="width: 100%" size="large">初始化并保存</el-button>
+            <el-button type="primary" @click="handleInit" :loading="loading" style="width: 100%" size="large">{{ $t('init.init_btn') }}</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -29,36 +43,48 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { loadLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Setting } from '@element-plus/icons-vue'
+import { User, Lock, Setting, ArrowDown } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { t, locale } = useI18n()
+const currentLocale = computed(() => locale.value)
 const formRef = ref()
 const loading = ref(false)
 
+async function switchLanguage(lang) {
+  await loadLocale(lang)
+}
+
 const form = reactive({ username: '', password: '', confirmPassword: '' })
 
-const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }, { min: 3, message: '至少3个字符', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }, { min: 6, message: '至少6个字符', trigger: 'blur' }],
-  confirmPassword: [{
-    required: true, message: '请确认密码', trigger: 'blur',
-  }, {
-    validator: (_, val, cb) => val === form.password ? cb() : cb(new Error('两次密码不一致')),
-    trigger: 'blur',
-  }],
-}
+const rules = computed(() => ({
+  username: [
+    { required: true, message: t('init.required_username'), trigger: 'blur' },
+    { min: 3, message: t('init.min_username'), trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: t('init.required_password'), trigger: 'blur' },
+    { min: 6, message: t('init.min_password'), trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: t('init.required_confirm'), trigger: 'blur' },
+    { validator: (_, val, cb) => val === form.password ? cb() : cb(new Error(t('init.password_mismatch'))), trigger: 'blur' }
+  ],
+}))
 
 async function handleInit() {
   await formRef.value.validate()
   loading.value = true
   try {
     await auth.init(form.username, form.password)
-    ElMessage.success('初始化成功，请登录')
+    ElMessage.success(t('init.init_success'))
     router.push('/login')
   } catch { /* handled by interceptor */ }
   finally { loading.value = false }
@@ -86,6 +112,24 @@ async function handleInit() {
   background:
     radial-gradient(ellipse at 20% 50%, rgba(64, 158, 255, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(64, 158, 255, 0.05) 0%, transparent 40%);
+}
+.lang-switch {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+}
+.lang-dropdown {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+.lang-dropdown:hover {
+  color: #fff;
 }
 .login-card {
   width: 400px;

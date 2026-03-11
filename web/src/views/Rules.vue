@@ -1,37 +1,37 @@
 <template>
   <div>
     <div style="display: flex; justify-content: space-between; margin-bottom: 16px">
-      <h3 style="margin: 0">聚合规则</h3>
-      <el-button type="primary" @click="showCreate">新增规则</el-button>
+      <h3 style="margin: 0">{{ $t('rules.title') }}</h3>
+      <el-button type="primary" @click="showCreate">{{ $t('rules.add') }}</el-button>
     </div>
 
     <el-table :data="rules" v-loading="loading" border stripe>
       <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="name" label="规则名称" width="150" show-overflow-tooltip />
-      <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip>
+      <el-table-column prop="name" :label="$t('rules.col_rule_name')" min-width="150" show-overflow-tooltip />
+      <el-table-column prop="description" :label="$t('common.description')" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">{{ row.description || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="type" label="类型" width="100">
+      <el-table-column prop="type" :label="$t('common.type')" width="120">
         <template #default="{ row }">
           <el-tag :type="typeTagMap[row.type]" size="small">{{ typeNameMap[row.type] }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="规则数" width="100" align="center">
+      <el-table-column :label="$t('rules.col_rule_count')" width="120" align="center">
         <template #default="{ row }">
           <el-tag size="small" type="info">{{ getRuleCount(row.config, row.type) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="80">
+      <el-table-column prop="status" :label="$t('common.status')" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status ? 'success' : 'info'" size="small">{{ row.status ? '启用' : '禁用' }}</el-tag>
+          <el-tag :type="row.status ? 'success' : 'info'" size="small">{{ row.status ? $t('common.enabled') : $t('common.disabled') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right" align="center">
+      <el-table-column :label="$t('common.operations')" width="140" fixed="right" align="center">
         <template #default="{ row }">
-          <el-tooltip content="编辑" placement="top" :show-after="500">
+          <el-tooltip :content="$t('common.edit')" placement="top" :show-after="500">
             <el-button icon="Edit" size="small" circle type="primary" @click="showEdit(row)" />
           </el-tooltip>
-          <el-tooltip content="删除" placement="top" :show-after="500">
+          <el-tooltip :content="$t('common.delete')" placement="top" :show-after="500">
             <el-button icon="Delete" size="small" circle type="danger" @click="handleDelete(row)" />
           </el-tooltip>
         </template>
@@ -39,138 +39,141 @@
     </el-table>
 
     <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑规则' : '新增规则'" width="700px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('rules.edit_title') : $t('rules.add_title')" width="700px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
-        <el-form-item label="规则名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入规则名称" />
+        <el-form-item :label="$t('rules.col_rule_name')" prop="name">
+          <el-input v-model="form.name" :placeholder="$t('rules.rule_name_placeholder')" />
         </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="form.description" placeholder="可选的规则描述说明" />
+        <el-form-item :label="$t('common.description')" prop="description">
+          <el-input v-model="form.description" :placeholder="$t('rules.rule_desc_placeholder')" />
         </el-form-item>
-        <el-form-item label="规则类型" prop="type" v-if="!isEdit">
+        <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
           <el-radio-group v-model="form.type" @change="onTypeChange">
-            <el-radio value="alias">频道别名</el-radio>
-            <el-radio value="filter">频道过滤</el-radio>
-            <el-radio value="group">频道分组</el-radio>
+            <el-radio value="alias">{{ $t('rules.type_alias') }}</el-radio>
+            <el-radio value="filter">{{ $t('rules.type_filter') }}</el-radio>
+            <el-radio value="group">{{ $t('rules.type_group') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         
-        <el-form-item label="状态" v-if="isEdit">
+        <el-form-item :label="$t('common.status')" v-if="isEdit">
           <el-switch v-model="form.status" />
         </el-form-item>
 
         <!-- Dynamic Rule Configs based on Type -->
-        <el-divider>配置详情</el-divider>
+        <el-divider>{{ $t('rules.config_detail') }}</el-divider>
         
         <!-- Type: Alias -->
         <template v-if="form.type === 'alias'">
           <div style="margin-bottom: 8px; color: #909399; font-size: 13px;">
-            设置频道别名。引擎会按顺序匹配，命中第一条即生效。正则模式下可使用 $1, $2 替换分组。
+            {{ $t('rules.alias_help') }}
           </div>
           <div v-for="(rule, idx) in aliasConfig" :key="idx" class="rule-box">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-weight: bold; color: #606266; font-size: 14px;">别名规则 {{ idx + 1 }}</span>
-              <el-button size="small" type="danger" link @click="aliasConfig.splice(idx, 1)">删除</el-button>
+              <span style="font-weight: bold; color: #606266; font-size: 14px;">{{ $t('rules.alias_rule_n', { n: idx + 1 }) }}</span>
+              <el-button size="small" type="danger" link @click="aliasConfig.splice(idx, 1)">{{ $t('common.delete') }}</el-button>
             </div>
             <el-row :gutter="10">
               <el-col :span="6">
-                <el-select v-model="rule.match_mode" size="small" placeholder="匹配模式">
-                  <el-option label="正则表达式" value="regex" />
-                  <el-option label="普通字符串" value="string" />
+                <el-select v-model="rule.match_mode" size="small" :placeholder="$t('rules.match_mode_placeholder')">
+                  <el-option :label="$t('rules.regex')" value="regex" />
+                  <el-option :label="$t('rules.string')" value="string" />
                 </el-select>
               </el-col>
               <el-col :span="9">
-                <el-input v-model="rule.pattern" size="small" placeholder="匹配内容 (如 ^CCTV-(.*)$)" />
+                <el-input v-model="rule.pattern" size="small" :placeholder="$t('rules.match_content_placeholder')" />
               </el-col>
               <el-col :span="9">
-                <el-input v-model="rule.replacement" size="small" placeholder="替换别名 (如 CCTV$1)" />
+                <el-input v-model="rule.replacement" size="small" :placeholder="$t('rules.replacement_placeholder')" />
               </el-col>
             </el-row>
           </div>
           <el-button size="small" style="width: 100%" @click="aliasConfig.push({ match_mode: 'regex', pattern: '', replacement: '' })">
-            + 添加别名规则
+            {{ $t('rules.add_alias_rule') }}
           </el-button>
         </template>
 
         <!-- Type: Filter -->
         <template v-if="form.type === 'filter'">
           <div style="margin-bottom: 8px; color: #909399; font-size: 13px;">
-            过滤掉不需要的频道或节目。引擎会按顺序匹配，命中即丢弃。
+            {{ $t('rules.filter_help') }}
           </div>
           <div v-for="(rule, idx) in filterConfig" :key="idx" class="rule-box">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-weight: bold; color: #606266; font-size: 14px;">过滤规则 {{ idx + 1 }}</span>
-              <el-button size="small" type="danger" link @click="filterConfig.splice(idx, 1)">删除</el-button>
+              <span style="font-weight: bold; color: #606266; font-size: 14px;">{{ $t('rules.filter_rule_n', { n: idx + 1 }) }}</span>
+              <el-button size="small" type="danger" link @click="filterConfig.splice(idx, 1)">{{ $t('common.delete') }}</el-button>
             </div>
             <el-row :gutter="10">
               <el-col :span="6">
-                <el-select v-model="rule.target" size="small" placeholder="匹配目标">
-                  <el-option label="原始名称" value="name" />
-                  <el-option label="频道别名" value="alias" />
+                <el-select v-model="rule.target" size="small" :placeholder="$t('rules.match_target_placeholder')">
+                  <el-option :label="$t('rules.target_name')" value="name" />
+                  <el-option :label="$t('rules.target_alias')" value="alias" />
                 </el-select>
               </el-col>
               <el-col :span="6">
-                <el-select v-model="rule.match_mode" size="small" placeholder="匹配模式">
-                  <el-option label="正则表达式" value="regex" />
-                  <el-option label="普通字符串" value="string" />
+                <el-select v-model="rule.match_mode" size="small" :placeholder="$t('rules.match_mode_placeholder')">
+                  <el-option :label="$t('rules.regex')" value="regex" />
+                  <el-option :label="$t('rules.string')" value="string" />
                 </el-select>
               </el-col>
               <el-col :span="12">
-                <el-input v-model="rule.pattern" size="small" placeholder="匹配内容 (如 .*购物.*)" />
+                <el-input v-model="rule.pattern" size="small" :placeholder="$t('rules.filter_content_placeholder')" />
               </el-col>
             </el-row>
           </div>
           <el-button size="small" style="width: 100%" @click="filterConfig.push({ target: 'name', match_mode: 'regex', pattern: '' })">
-            + 添加过滤规则
+            {{ $t('rules.add_filter_rule') }}
           </el-button>
         </template>
 
         <!-- Type: Group -->
         <template v-if="form.type === 'group'">
           <div style="margin-bottom: 8px; color: #909399; font-size: 13px;">
-            频道分组（仅直播生效）。从上到下匹配，命中后归入指定分组。
+            {{ $t('rules.group_help') }}
           </div>
           <div v-for="(group, gIdx) in groupConfig" :key="gIdx" class="rule-box" style="background: #fafafa">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
-              <el-input v-model="group.group_name" size="small" placeholder="分组名称 (如：央视)" style="width: 200px" />
-              <el-button size="small" type="danger" link @click="groupConfig.splice(gIdx, 1)">删除分组</el-button>
+              <el-input v-model="group.group_name" size="small" :placeholder="$t('rules.group_name_placeholder')" style="width: 200px" />
+              <el-button size="small" type="danger" link @click="groupConfig.splice(gIdx, 1)">{{ $t('rules.delete_group') }}</el-button>
             </div>
             
             <div v-for="(rule, rIdx) in group.rules" :key="rIdx" style="margin-bottom: 6px; display: flex; gap: 8px">
-              <el-select v-model="rule.target" size="small" style="width: 100px" placeholder="匹配目标">
-                <el-option label="原始名称" value="name" />
-                <el-option label="频道别名" value="alias" />
+              <el-select v-model="rule.target" size="small" style="width: 100px" :placeholder="$t('rules.match_target_placeholder')">
+                <el-option :label="$t('rules.target_name')" value="name" />
+                <el-option :label="$t('rules.target_alias')" value="alias" />
               </el-select>
               <el-select v-model="rule.match_mode" size="small" style="width: 110px">
-                <el-option label="正则表达式" value="regex" />
-                <el-option label="普通字符串" value="string" />
+                <el-option :label="$t('rules.regex')" value="regex" />
+                <el-option :label="$t('rules.string')" value="string" />
               </el-select>
-              <el-input v-model="rule.pattern" size="small" placeholder="匹配内容" style="flex: 1" />
+              <el-input v-model="rule.pattern" size="small" :placeholder="$t('rules.match_content_short')" style="flex: 1" />
               <el-button size="small" icon="Delete" circle @click="group.rules.splice(rIdx, 1)" />
             </div>
             <el-button size="small" type="primary" plain @click="group.rules.push({ target: 'name', match_mode: 'regex', pattern: '' })">
-              + 增加匹配条件
+              {{ $t('rules.add_match_condition') }}
             </el-button>
           </div>
           <el-button size="small" style="width: 100%" @click="groupConfig.push({ group_name: '', rules: [{ target: 'name', match_mode: 'regex', pattern: '' }] })">
-            + 添加分组
+            {{ $t('rules.add_group') }}
           </el-button>
         </template>
 
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import api from '../api'
+
+const { t } = useI18n()
 
 const rules = ref([])
 const loading = ref(false)
@@ -180,13 +183,13 @@ const editId = ref(null)
 const submitting = ref(false)
 const formRef = ref()
 
-const typeNameMap = { alias: '频道别名', filter: '频道过滤', group: '频道分组' }
+const typeNameMap = computed(() => ({ alias: t('rules.type_alias'), filter: t('rules.type_filter'), group: t('rules.type_group') }))
 const typeTagMap = { alias: 'primary', filter: 'danger', group: 'warning' }
 
 const form = reactive({ name: '', type: 'alias', status: true })
-const formRules = {
-  name: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
-}
+const formRules = computed(() => ({
+  name: [{ required: true, message: t('rules.rule_name_placeholder'), trigger: 'blur' }],
+}))
 
 // Config states
 const aliasConfig = ref([])
@@ -274,7 +277,7 @@ async function handleSubmit() {
   }
 
   if (configData.length === 0) {
-    ElMessage.warning('规则内容不能为空，请至少填写一条有效规则')
+    ElMessage.warning(t('rules.config_empty'))
     return
   }
 
@@ -290,10 +293,10 @@ async function handleSubmit() {
     if (isEdit.value) {
       body.status = form.status
       await api.put(`/rules/${editId.value}`, body)
-      ElMessage.success('更新成功')
+      ElMessage.success(t('rules.update_success'))
     } else {
       await api.post('/rules', body)
-      ElMessage.success('创建成功')
+      ElMessage.success(t('rules.create_success'))
     }
     dialogVisible.value = false
     await loadRules()
@@ -302,9 +305,9 @@ async function handleSubmit() {
 }
 
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确定删除规则 "${row.name}"？`, '确认删除', { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' })
+  await ElMessageBox.confirm(t('rules.delete_confirm', { name: row.name }), t('common.confirm_delete'), { type: 'warning', confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel') })
   await api.delete(`/rules/${row.id}`)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('common.delete_success'))
   await loadRules()
 }
 </script>

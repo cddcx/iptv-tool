@@ -48,9 +48,9 @@ func (s *DetectService) GetFFprobePath() (string, string, error) {
 			// Uploaded file exists but cannot run
 			errMsg := err.Error()
 			if runtime.GOOS == "linux" && strings.Contains(errMsg, "no such file or directory") {
-				return "", "", fmt.Errorf("已上传的文件存在但无法执行 (可能原因: 系统架构不符，或系统缺少该程序所需的动态链接库，例如在 Alpine/Docker 环境中运行了基于 glibc 动态编译的程序。请查阅系统环境，并尝试上传静态编译版本 - Static Build 的 ffprobe): %w", err)
+				return "", "", fmt.Errorf("uploaded file exists but cannot execute (possible cause: architecture mismatch, or missing dynamic libraries needed by the binary. In Alpine/Docker environments with glibc-compiled programs, try uploading a static build): %w", err)
 			}
-			return "", "", fmt.Errorf("已上传的 ffprobe 可执行文件运行失败: %w", err)
+			return "", "", fmt.Errorf("uploaded ffprobe executable failed to run: %w", err)
 		}
 	}
 
@@ -63,7 +63,7 @@ func (s *DetectService) GetFFprobePath() (string, string, error) {
 		}
 	}
 
-	return "", "", fmt.Errorf("系统未安装 ffprobe 且未上传可执行文件，请在设置中上传")
+	return "", "", fmt.Errorf("error.ffprobe_not_found")
 }
 
 // GetFFprobeVersion returns the version string of the installed ffprobe and its source ("uploaded" or "system")
@@ -79,7 +79,7 @@ func (s *DetectService) GetFFprobeVersion() (string, string, error) {
 	cmd := exec.CommandContext(ctx, ffprobePath, "-version")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", source, fmt.Errorf("获取 ffprobe 版本失败: %w", err)
+		return "", source, fmt.Errorf("failed to get ffprobe version: %w", err)
 	}
 
 	// Parse first line: "ffprobe version N-xxxxx-gxxxxxxx Copyright ..."
@@ -119,7 +119,7 @@ func (s *DetectService) getDetectConfig() (concurrency int, timeout int) {
 func (s *DetectService) DetectChannels(sourceID uint, manual bool) error {
 	var source model.LiveSource
 	if err := model.DB.First(&source, sourceID).Error; err != nil {
-		return fmt.Errorf("直播源 %d 未找到: %w", sourceID, err)
+		return fmt.Errorf("live source %d not found: %w", sourceID, err)
 	}
 
 	if !source.Status {
@@ -128,13 +128,13 @@ func (s *DetectService) DetectChannels(sourceID uint, manual bool) error {
 
 	// Check if already detecting
 	if source.IsDetecting {
-		return fmt.Errorf("该直播源正在检测中，请勿重复触发")
+		return fmt.Errorf("error.source_detecting")
 	}
 
 	// Check syncing status
 	if manual {
 		if source.IsSyncing {
-			return fmt.Errorf("该直播源正在刷新中，请等待刷新完成后再执行检测")
+			return fmt.Errorf("error.source_refreshing")
 		}
 	} else {
 		// Wait for syncing to finish (auto/scheduled mode)
@@ -166,7 +166,7 @@ func (s *DetectService) DetectChannels(sourceID uint, manual bool) error {
 	// Load channels
 	var channels []model.ParsedChannel
 	if err := model.DB.Where("source_id = ?", sourceID).Find(&channels).Error; err != nil {
-		return fmt.Errorf("加载频道列表失败: %w", err)
+		return fmt.Errorf("failed to load channel list: %w", err)
 	}
 
 	if len(channels) == 0 {
@@ -310,13 +310,13 @@ func (s *DetectService) waitForSyncComplete(sourceID uint, maxWait time.Duration
 	for {
 		var source model.LiveSource
 		if err := model.DB.First(&source, sourceID).Error; err != nil {
-			return fmt.Errorf("直播源 %d 未找到: %w", sourceID, err)
+			return fmt.Errorf("live source %d not found: %w", sourceID, err)
 		}
 		if !source.IsSyncing {
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("等待直播源刷新完成超时（超过 %v）", maxWait)
+			return fmt.Errorf("timed out waiting for source sync to complete (exceeded %v)", maxWait)
 		}
 		<-ticker.C
 	}

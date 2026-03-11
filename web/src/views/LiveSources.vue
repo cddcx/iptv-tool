@@ -1,39 +1,39 @@
 <template>
   <div>
     <div style="display: flex; justify-content: space-between; margin-bottom: 16px">
-      <h3 style="margin: 0">直播源管理</h3>
-      <el-button type="primary" @click="showCreate">新增直播源</el-button>
+      <h3 style="margin: 0">{{ $t('live_sources.title') }}</h3>
+      <el-button type="primary" @click="showCreate">{{ $t('live_sources.add') }}</el-button>
     </div>
 
     <el-table :data="sources" v-loading="loading" border stripe>
       <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="name" label="名称" width="120" show-overflow-tooltip />
-      <el-table-column prop="description" label="描述" min-width="120" show-overflow-tooltip>
+      <el-table-column prop="name" :label="$t('common.name')" min-width="140" show-overflow-tooltip />
+      <el-table-column prop="description" :label="$t('common.description')" min-width="140" show-overflow-tooltip>
         <template #default="{ row }">{{ row.description || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="type" label="类型" width="120">
+      <el-table-column prop="type" :label="$t('common.type')" width="140">
         <template #default="{ row }">
           <el-tag :type="typeTagMap[row.type]" size="small">{{ typeNameMap[row.type] }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="cron_time" label="定时刷新" width="100">
+      <el-table-column prop="cron_time" :label="$t('live_sources.cron_refresh')" width="140">
         <template #default="{ row }">{{ row.cron_time || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="80">
+      <el-table-column prop="status" :label="$t('common.status')" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status ? 'success' : 'info'" size="small">{{ row.status ? '启用' : '禁用' }}</el-tag>
+          <el-tag :type="row.status ? 'success' : 'info'" size="small">{{ row.status ? $t('common.enabled') : $t('common.disabled') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="channel_count" label="频道数" width="80" align="center">
+      <el-table-column prop="channel_count" :label="$t('live_sources.channel_count')" width="120" align="center">
         <template #default="{ row }">
           <el-tag type="info" size="small">{{ row.channel_count || 0 }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="更新时间" width="200">
+      <el-table-column :label="$t('common.update_time')" width="200">
         <template #default="{ row }">
           <div v-if="row.is_syncing" style="display: flex; align-items: center; gap: 6px; color: #409eff">
             <el-icon class="is-loading" :size="16"><Loading /></el-icon>
-            <span>同步中...</span>
+            <span>{{ $t('common.syncing') }}</span>
           </div>
           <div v-else-if="row.last_fetched_at" style="display: flex; align-items: center; gap: 6px">
             <el-tooltip v-if="row.last_error" :content="row.last_error" placement="top" :show-after="300">
@@ -45,18 +45,18 @@
           <span v-else>-</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right" align="center">
+      <el-table-column :label="$t('common.operations')" width="180" fixed="right" align="center">
         <template #default="{ row }">
-          <el-tooltip content="频道列表" placement="top" :show-after="500">
+          <el-tooltip :content="$t('live_sources.tooltip_channels')" placement="top" :show-after="500">
             <el-button :icon="List" size="small" circle @click="showChannels(row)" />
           </el-tooltip>
-          <el-tooltip content="同步" placement="top" :show-after="500">
+          <el-tooltip :content="$t('live_sources.tooltip_sync')" placement="top" :show-after="500">
             <el-button :icon="Refresh" size="small" circle type="warning" @click="triggerFetch(row)" />
           </el-tooltip>
-          <el-tooltip content="编辑" placement="top" :show-after="500">
+          <el-tooltip :content="$t('common.edit')" placement="top" :show-after="500">
             <el-button :icon="Edit" size="small" circle type="primary" @click="showEdit(row)" />
           </el-tooltip>
-          <el-tooltip content="删除" placement="top" :show-after="500">
+          <el-tooltip :content="$t('common.delete')" placement="top" :show-after="500">
             <el-button :icon="Delete" size="small" circle type="danger" @click="handleDelete(row)" />
           </el-tooltip>
         </template>
@@ -64,198 +64,198 @@
     </el-table>
 
     <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑直播源' : '新增直播源'" width="680px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('live_sources.edit_title') : $t('live_sources.add_title')" width="680px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="120px">
-        <el-form-item label="名称" prop="name">
+        <el-form-item :label="$t('common.name')" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" placeholder="可选的描述信息" />
+        <el-form-item :label="$t('common.description')">
+          <el-input v-model="form.description" :placeholder="$t('common.optional_description')" />
         </el-form-item>
-        <el-form-item label="类型" prop="type" v-if="!isEdit">
+        <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
           <el-select v-model="form.type" style="width: 100%" @change="onTypeChange">
-            <el-option label="IPTV (STB模拟)" value="iptv" />
-            <el-option label="网络订阅URL" value="network_url" />
-            <el-option label="手动输入" value="network_manual" />
+            <el-option :label="$t('live_sources.type_iptv_stb')" value="iptv" />
+            <el-option :label="$t('live_sources.type_network_url_label')" value="network_url" />
+            <el-option :label="$t('live_sources.type_network_manual')" value="network_manual" />
           </el-select>
         </el-form-item>
 
         <!-- network_url fields -->
-        <el-form-item label="订阅URL" v-if="form.type === 'network_url'" prop="url">
-          <el-input v-model="form.url" placeholder="http://example.com/live.m3u 或 live.txt (系统自动识别M3U或TXT格式)" />
+        <el-form-item :label="$t('live_sources.subscribe_url')" v-if="form.type === 'network_url'" prop="url">
+          <el-input v-model="form.url" :placeholder="$t('live_sources.subscribe_url_placeholder')" />
         </el-form-item>
 
         <template v-if="form.type === 'network_url'">
-          <el-divider content-position="left">自定义HTTP请求头</el-divider>
+          <el-divider content-position="left">{{ $t('live_sources.custom_headers') }}</el-divider>
           <div style="margin-bottom: 16px; padding: 0 40px">
             <div v-for="(header, idx) in form.network_headers" :key="idx" style="display: flex; gap: 8px; margin-bottom: 8px">
-              <el-input v-model="header.name" placeholder="Header名称" style="width: 200px" />
-              <el-input v-model="header.value" placeholder="Header值" style="flex: 1" />
+              <el-input v-model="header.name" :placeholder="$t('live_sources.header_name')" style="width: 200px" />
+              <el-input v-model="header.value" :placeholder="$t('live_sources.header_value')" style="flex: 1" />
               <el-button :icon="Delete" circle size="small" @click="form.network_headers.splice(idx, 1)" />
             </div>
             <el-button size="small" @click="form.network_headers.push({ name: '', value: '' })">
-              <el-icon><Plus /></el-icon> 添加请求头
+              <el-icon><Plus /></el-icon> {{ $t('live_sources.add_header') }}
             </el-button>
           </div>
         </template>
 
         <!-- network_manual fields -->
-        <el-form-item label="内容" v-if="form.type === 'network_manual'" prop="content">
-          <el-input v-model="form.content" type="textarea" :rows="8" placeholder="支持纯文本粘贴，系统会自动识别格式：&#10;[M3U格式]&#10;#EXTM3U&#10;#EXTINF:-1,CCTV1&#10;http://...&#10;&#10;[TXT格式]&#10;央视,#genre#&#10;CCTV1,http://..." />
+        <el-form-item :label="$t('live_sources.content')" v-if="form.type === 'network_manual'" prop="content">
+          <el-input v-model="form.content" type="textarea" :rows="8" :placeholder="$t('live_sources.content_placeholder')" />
         </el-form-item>
 
         <!-- === IPTV specific fields === -->
         <template v-if="form.type === 'iptv'">
-          <el-divider content-position="left">IPTV 平台配置</el-divider>
+          <el-divider content-position="left">{{ $t('live_sources.iptv_config') }}</el-divider>
 
-          <el-form-item label="IPTV平台" prop="iptv.platform">
+          <el-form-item :label="$t('live_sources.iptv_platform')" prop="iptv.platform">
             <el-select v-model="form.iptv.platform" style="width: 100%">
-              <el-option label="华为 (Huawei)" value="huawei" />
+              <el-option :label="$t('live_sources.huawei')" value="huawei" />
             </el-select>
           </el-form-item>
 
-          <el-form-item label="服务器地址" prop="iptv.serverHost">
-            <el-input v-model="form.iptv.serverHost" placeholder="例如: 182.138.3.142:8082" />
+          <el-form-item :label="$t('live_sources.server_host')" prop="iptv.serverHost">
+            <el-input v-model="form.iptv.serverHost" :placeholder="$t('live_sources.server_host_placeholder')" />
           </el-form-item>
 
-          <el-form-item label="运营商" prop="iptv.providerSuffix">
+          <el-form-item :label="$t('live_sources.provider')" prop="iptv.providerSuffix">
             <el-select v-model="form.iptv.providerSuffix" style="width: 100%">
-              <el-option label="CTC (电信)" value="CTC" />
-              <el-option label="CU (联通)" value="CU" />
+              <el-option :label="$t('live_sources.ctc')" value="CTC" />
+              <el-option :label="$t('live_sources.cu')" value="CU" />
             </el-select>
           </el-form-item>
 
-          <el-form-item label="加密密钥" prop="iptv.key">
+          <el-form-item :label="$t('live_sources.encrypt_key')" prop="iptv.key">
             <div style="display: flex; gap: 8px; width: 100%">
-              <el-input v-model="form.iptv.key" placeholder="8位数字密钥，如 12345678" style="flex: 1" />
-              <el-button type="success" @click="showCrackDialog" :disabled="cracking">一键破解</el-button>
+              <el-input v-model="form.iptv.key" :placeholder="$t('live_sources.key_placeholder')" style="flex: 1" />
+              <el-button type="success" @click="showCrackDialog" :disabled="cracking">{{ $t('live_sources.crack_key') }}</el-button>
             </div>
           </el-form-item>
 
-          <el-form-item label="客户端IP" prop="iptv.ip">
-            <el-input v-model="form.iptv.ip" placeholder="手动填写IP 或 填写网络接口名称(如 eth0, eth1.50)" />
+          <el-form-item :label="$t('live_sources.client_ip')" prop="iptv.ip">
+            <el-input v-model="form.iptv.ip" :placeholder="$t('live_sources.client_ip_placeholder')" />
             <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
-              可填写具体IP地址，也可填写系统网络接口名称（程序自动获取该接口的IP）
+              {{ $t('live_sources.client_ip_help') }}
             </div>
           </el-form-item>
 
-          <el-divider content-position="left">自定义HTTP请求头</el-divider>
+          <el-divider content-position="left">{{ $t('live_sources.custom_headers') }}</el-divider>
           <div style="margin-bottom: 16px">
             <div v-for="(header, idx) in form.iptv.headersList" :key="idx" style="display: flex; gap: 8px; margin-bottom: 8px">
-              <el-input v-model="header.name" placeholder="Header名称" style="width: 200px" />
-              <el-input v-model="header.value" placeholder="Header值" style="flex: 1" />
+              <el-input v-model="header.name" :placeholder="$t('live_sources.header_name')" style="width: 200px" />
+              <el-input v-model="header.value" :placeholder="$t('live_sources.header_value')" style="flex: 1" />
               <el-button :icon="Delete" circle size="small" @click="form.iptv.headersList.splice(idx, 1)" />
             </div>
             <el-button size="small" @click="form.iptv.headersList.push({ name: '', value: '' })">
-              <el-icon><Plus /></el-icon> 添加请求头
+              <el-icon><Plus /></el-icon> {{ $t('live_sources.add_header') }}
             </el-button>
           </div>
 
-          <el-divider content-position="left">认证接口参数</el-divider>
-          <el-form-item label="认证参数" prop="iptv.authParamsStr">
+          <el-divider content-position="left">{{ $t('live_sources.auth_params_section') }}</el-divider>
+          <el-form-item :label="$t('live_sources.auth_params')" prop="iptv.authParamsStr">
             <el-input v-model="form.iptv.authParamsStr" type="textarea" :rows="10"
-              placeholder="JSON格式，用于 ValidAuthenticationHW 接口的参数" />
+              :placeholder="$t('live_sources.auth_params_placeholder')" />
             <div style="color: #909399; font-size: 12px; line-height: 1.6; margin-top: 4px">
-              填写 ValidAuthenticationHW{{ form.iptv.providerSuffix }}.jsp 接口所需的参数（JSON格式）。
-              <el-link type="primary" :underline="false" @click="fillAuthExample" style="font-size: 12px">填入示例配置</el-link>
+              {{ $t('live_sources.auth_params_help') }}
+              <el-link type="primary" :underline="false" @click="fillAuthExample" style="font-size: 12px">{{ $t('live_sources.fill_example') }}</el-link>
             </div>
           </el-form-item>
         </template>
 
         <!-- Cron -->
-        <el-form-item label="定时刷新" v-if="form.type !== 'network_manual'">
-          <el-select v-model="form.cron_time" clearable placeholder="不定时刷新" style="width: 100%">
+        <el-form-item :label="$t('live_sources.cron_refresh')" v-if="form.type !== 'network_manual'">
+          <el-select v-model="form.cron_time" clearable :placeholder="$t('live_sources.no_cron_refresh')" style="width: 100%">
             <el-option v-for="opt in cronOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
         </el-form-item>
 
         <!-- Cron Detect -->
-        <el-form-item label="定时检测">
-          <el-select v-model="form.cron_detect" clearable placeholder="不定时检测" style="width: 100%">
+        <el-form-item :label="$t('live_sources.cron_detect')">
+          <el-select v-model="form.cron_detect" clearable :placeholder="$t('live_sources.no_cron_detect')" style="width: 100%">
             <el-option v-for="opt in cronOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
           </el-select>
           <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
-            使用 ffprobe 定时检测频道延迟、编码和分辨率，需先在系统设置中上传 ffprobe 文件
+            {{ $t('live_sources.cron_detect_help') }}
           </div>
         </el-form-item>
 
         <!-- EPG sync for IPTV -->
         <template v-if="form.type === 'iptv' && !isEdit">
-          <el-form-item label="同步EPG">
+          <el-form-item :label="$t('live_sources.sync_epg')">
             <el-switch v-model="form.epg_enabled" />
-            <span style="margin-left: 8px; color: #909399; font-size: 12px">自动创建关联的EPG源</span>
+            <span style="margin-left: 8px; color: #909399; font-size: 12px">{{ $t('live_sources.auto_create_epg') }}</span>
           </el-form-item>
-          <el-form-item label="EPG策略" v-if="form.epg_enabled">
+          <el-form-item :label="$t('live_sources.epg_strategy')" v-if="form.epg_enabled">
             <el-select v-model="form.iptv.channelProgramAPI" style="width: 100%">
               <el-option v-for="opt in epgStrategies" :key="opt.value" :label="opt.label" :value="opt.value" />
             </el-select>
             <div style="color: #909399; font-size: 12px; margin-top: 4px">
-              选择"自动检测"将依次尝试所有策略，成功后自动记录
+              {{ $t('live_sources.epg_strategy_help') }}
             </div>
           </el-form-item>
         </template>
 
         <!-- Auto-create EPG for network types -->
         <template v-if="(form.type === 'network_url' || form.type === 'network_manual')">
-          <el-form-item label="自动创建EPG">
+          <el-form-item :label="$t('live_sources.auto_create_epg_label')">
             <el-switch v-model="form.epg_enabled" />
             <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
-              若内容为M3U格式且包含 x-tvg-url 属性，将自动创建网络XMLTV类型的EPG源
+              {{ $t('live_sources.auto_create_epg_help') }}
             </div>
           </el-form-item>
         </template>
 
         <!-- Status (edit only) -->
-        <el-form-item label="状态" v-if="isEdit">
+        <el-form-item :label="$t('common.status')" v-if="isEdit">
           <el-switch v-model="form.status" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- Crack Key Dialog -->
-    <el-dialog v-model="crackDialogVisible" title="一键破解密钥" width="500px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="crackDialogVisible" :title="$t('live_sources.crack_title')" width="500px" destroy-on-close :close-on-click-modal="false">
       <el-form label-width="100px">
         <el-form-item label="Authenticator">
           <el-input v-model="crackAuthenticator" type="textarea" :rows="3"
-            placeholder="请粘贴抓包获取的 Authenticator 值（16进制字符串）" />
+            :placeholder="$t('live_sources.crack_auth_placeholder')" />
         </el-form-item>
-        <el-alert v-if="crackResult" :title="'破解成功，密钥为: ' + crackResult" type="success" show-icon :closable="false" style="margin-bottom: 12px" />
+        <el-alert v-if="crackResult" :title="$t('live_sources.crack_success') + crackResult" type="success" show-icon :closable="false" style="margin-bottom: 12px" />
         <el-alert v-if="crackError" :title="crackError" type="error" show-icon :closable="false" style="margin-bottom: 12px" />
       </el-form>
       <template #footer>
-        <el-button @click="crackDialogVisible = false">取消</el-button>
+        <el-button @click="crackDialogVisible = false">{{ $t('common.cancel') }}</el-button>
         <el-button type="primary" @click="doCrack" :loading="cracking">
-          {{ cracking ? '破解中...' : '开始破解' }}
+          {{ cracking ? $t('live_sources.cracking') : $t('live_sources.crack_start') }}
         </el-button>
-        <el-button v-if="crackResult" type="success" @click="applyCrackResult">应用密钥</el-button>
+        <el-button v-if="crackResult" type="success" @click="applyCrackResult">{{ $t('live_sources.crack_apply') }}</el-button>
       </template>
     </el-dialog>
 
     <!-- Channels Dialog -->
-    <el-dialog v-model="channelsVisible" title="频道列表" width="1100px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="channelsVisible" :title="$t('live_sources.channels_title')" width="1100px" destroy-on-close :close-on-click-modal="false">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
         <span style="color: #909399; font-size: 13px">
-          共 {{ filteredChannels.length }} 个频道 {{ channelsSearch ? '(已过滤)' : '' }}
+          {{ $t('live_sources.channels_total', { count: filteredChannels.length }) }} {{ channelsSearch ? $t('live_sources.channels_filtered') : '' }}
           <span v-if="channelsDetecting" style="margin-left: 12px; color: #e6a23c">
-            [检测进度: {{ detectedCount }} / {{ channels.length }}]
+            {{ $t('live_sources.detect_progress', { detected: detectedCount, total: channels.length }) }}
           </span>
         </span>
         <div style="display: flex; gap: 12px; align-items: center">
-          <el-input v-model="channelsSearch" placeholder="搜索频道ID或名称" style="width: 200px" size="small" clearable @input="handleSearchChange" />
+          <el-input v-model="channelsSearch" :placeholder="$t('live_sources.search_channel')" style="width: 200px" size="small" clearable @input="handleSearchChange" />
           <el-button type="warning" size="small" @click="triggerDetect" :loading="detectTriggering" :disabled="channelsDetecting">
-            {{ channelsDetecting ? '检测中...' : '检测' }}
+            {{ channelsDetecting ? $t('live_sources.detecting') : $t('live_sources.detect_btn') }}
           </el-button>
         </div>
       </div>
       <el-table :data="paginatedChannels" max-height="400" border stripe size="small" style="user-select: text">
-        <el-table-column prop="tvg_id" label="频道ID" width="120" show-overflow-tooltip />
-        <el-table-column prop="name" label="频道名" width="130" />
-        <el-table-column prop="group" label="分组" width="100" />
-        <el-table-column label="延迟" width="90" align="center">
+        <el-table-column prop="tvg_id" :label="$t('live_sources.col_channel_id')" width="150" show-overflow-tooltip />
+        <el-table-column prop="name" :label="$t('live_sources.col_channel_name')" min-width="150" />
+        <el-table-column prop="group" :label="$t('live_sources.col_group')" min-width="120" />
+        <el-table-column :label="$t('live_sources.col_latency')" width="100" align="center">
           <template #default="{ row }">
             <span v-if="channelsDetecting && (row.latency === null || row.latency === undefined)">
               <el-icon class="is-loading" :size="14"><Loading /></el-icon>
@@ -267,7 +267,7 @@
             <span v-else style="color: #e6a23c; font-weight: 600">{{ row.latency }}ms</span>
           </template>
         </el-table-column>
-        <el-table-column label="视频编码" width="100" align="center">
+        <el-table-column :label="$t('live_sources.col_video_codec')" width="120" align="center">
           <template #default="{ row }">
             <span v-if="channelsDetecting && (row.video_codec === null || row.video_codec === undefined) && (row.latency === null || row.latency === undefined)">
               <el-icon class="is-loading" :size="14"><Loading /></el-icon>
@@ -276,7 +276,7 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="视频分辨率" width="110" align="center">
+        <el-table-column :label="$t('live_sources.col_video_resolution')" width="140" align="center">
           <template #default="{ row }">
             <span v-if="channelsDetecting && (row.video_resolution === null || row.video_resolution === undefined) && (row.latency === null || row.latency === undefined)">
               <el-icon class="is-loading" :size="14"><Loading /></el-icon>
@@ -285,12 +285,12 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="地址" min-width="250">
+        <el-table-column :label="$t('live_sources.col_address')" min-width="250">
           <template #default="{ row }">
             <div v-if="row.url && row.url.includes('|')">
               <div v-for="(u, i) in row.url.split('|')" :key="i" style="margin-bottom: 2px">
                 <el-tag size="small" :type="u.startsWith('igmp://') || u.startsWith('rtp://') ? 'warning' : 'success'" style="margin-right: 4px">
-                  {{ u.startsWith('igmp://') || u.startsWith('rtp://') ? '组播' : '单播' }}
+                  {{ u.startsWith('igmp://') || u.startsWith('rtp://') ? $t('live_sources.multicast') : $t('live_sources.unicast') }}
                 </el-tag>
                 <span style="font-size: 12px; word-break: break-all">{{ u }}</span>
               </div>
@@ -314,9 +314,12 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { List, Refresh, Edit, Delete, Plus, SuccessFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
 import api from '../api'
+
+const { t } = useI18n()
 
 const sources = ref([])
 const loading = ref(false)
@@ -377,7 +380,7 @@ const crackResult = ref('')
 const crackError = ref('')
 const cracking = ref(false)
 
-const typeNameMap = { iptv: 'IPTV', network_url: '网络URL', network_manual: '手动输入' }
+const typeNameMap = computed(() => ({ iptv: 'IPTV', network_url: t('live_sources.type_network_url'), network_manual: t('live_sources.type_network_manual') }))
 const typeTagMap = { iptv: 'danger', network_url: '', network_manual: 'warning' }
 
 const defaultHeaders = [
@@ -429,18 +432,18 @@ const defaultForm = () => ({
 })
 const form = reactive(defaultForm())
 
-const formRules = {
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-  url: [{ required: true, message: '请输入订阅URL', trigger: 'blur' }],
-  content: [{ required: true, message: '请输入内容', trigger: 'blur' }],
-  'iptv.platform': [{ required: true, message: '请选择IPTV平台', trigger: 'change' }],
-  'iptv.serverHost': [{ required: true, message: '请输入IPTV服务器地址', trigger: 'blur' }],
-  'iptv.providerSuffix': [{ required: true, message: '请选择运营商', trigger: 'change' }],
-  'iptv.key': [{ required: true, message: '请输入加密密钥', trigger: 'blur' }],
-  'iptv.ip': [{ required: true, message: '请输入客户端IP或接口名称', trigger: 'blur' }],
-  'iptv.authParamsStr': [{ required: true, message: '请输入认证参数', trigger: 'blur' }],
-}
+const formRules = computed(() => ({
+  name: [{ required: true, message: t('common.required_name'), trigger: 'blur' }],
+  type: [{ required: true, message: t('common.required_type'), trigger: 'change' }],
+  url: [{ required: true, message: t('live_sources.required_url'), trigger: 'blur' }],
+  content: [{ required: true, message: t('live_sources.required_content'), trigger: 'blur' }],
+  'iptv.platform': [{ required: true, message: t('live_sources.required_platform'), trigger: 'change' }],
+  'iptv.serverHost': [{ required: true, message: t('live_sources.required_server'), trigger: 'blur' }],
+  'iptv.providerSuffix': [{ required: true, message: t('live_sources.required_provider'), trigger: 'change' }],
+  'iptv.key': [{ required: true, message: t('live_sources.required_key'), trigger: 'blur' }],
+  'iptv.ip': [{ required: true, message: t('live_sources.required_ip'), trigger: 'blur' }],
+  'iptv.authParamsStr': [{ required: true, message: t('live_sources.required_auth_params'), trigger: 'blur' }],
+}))
 
 onMounted(async () => {
   await loadSources()
@@ -491,7 +494,7 @@ function buildIptvConfig() {
     try {
       authParams = JSON.parse(iptv.authParamsStr)
     } catch {
-      throw new Error('认证参数JSON格式不正确')
+      throw new Error(t('live_sources.invalid_auth_json'))
     }
   }
 
@@ -622,14 +625,14 @@ async function handleSubmit() {
         body.auto_create_epg = true
       }
       await api.put(`/live-sources/${editId.value}`, body)
-      ElMessage.success('更新成功')
+      ElMessage.success(t('common.update_success'))
     } else {
       const body = { name: form.name, description: form.description, type: form.type, url: form.url, content: form.content, headers: headersJson, cron_time: form.cron_time, cron_detect: form.cron_detect, epg_enabled: form.epg_enabled }
       if (form.type === 'iptv') {
         body.iptv_config = buildIptvConfig()
       }
       await api.post('/live-sources', body)
-      ElMessage.success('创建成功')
+      ElMessage.success(t('common.create_success'))
     }
     dialogVisible.value = false
     await loadSources()
@@ -641,18 +644,18 @@ async function handleSubmit() {
 
 async function handleDelete(row) {
   await ElMessageBox.confirm(
-    `确定删除直播源 "${row.name}"？关联的EPG源和频道数据也将被删除。`,
-    '确认删除',
-    { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' }
+    t('live_sources.delete_confirm', { name: row.name }),
+    t('common.confirm_delete'),
+    { type: 'warning', confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel') }
   )
   await api.delete(`/live-sources/${row.id}`)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('common.delete_success'))
   await loadSources()
 }
 
 async function triggerFetch(row) {
   await api.post(`/live-sources/${row.id}/trigger`)
-  ElMessage.success('已触发刷新')
+  ElMessage.success(t('live_sources.trigger_success'))
   await loadSources(false)
 }
 
@@ -679,7 +682,7 @@ async function triggerDetect() {
   detectTriggering.value = true
   try {
     await api.post(`/live-sources/${channelsSourceId.value}/detect`)
-    ElMessage.success('已触发检测')
+    ElMessage.success(t('live_sources.trigger_detect'))
     channelsDetecting.value = true
     
     // Reset local channels state so UI immediately shows loading state
@@ -748,7 +751,7 @@ function showCrackDialog() {
 
 async function doCrack() {
   if (!crackAuthenticator.value.trim()) {
-    ElMessage.warning('请输入 Authenticator 值')
+    ElMessage.warning(t('live_sources.crack_enter_auth'))
     return
   }
   cracking.value = true
@@ -758,7 +761,7 @@ async function doCrack() {
     const { data } = await api.post('/crack-key', { authenticator: crackAuthenticator.value.trim() }, { timeout: 360000 })
     crackResult.value = data.key
   } catch (e) {
-    crackError.value = e.response?.data?.error || '破解失败'
+    crackError.value = e.response?.data?.error || t('live_sources.crack_failed')
   } finally {
     cracking.value = false
   }
@@ -768,7 +771,7 @@ function applyCrackResult() {
   if (crackResult.value) {
     form.iptv.key = crackResult.value
     crackDialogVisible.value = false
-    ElMessage.success('密钥已应用')
+    ElMessage.success(t('live_sources.key_applied'))
   }
 }
 </script>

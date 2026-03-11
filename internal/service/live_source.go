@@ -98,13 +98,13 @@ func (s *LiveSourceService) ValidateNetworkURL(sourceURL string, headersJSON str
 	case "txt":
 		channels, err = m3u.ParseTXT(content)
 	default:
-		return "", "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
+		return "", "", fmt.Errorf("error.content_not_m3u_txt")
 	}
 	if err != nil {
 		return "", "", fmt.Errorf("content parsing failed: %w", err)
 	}
 	if len(channels) == 0 {
-		return "", "", fmt.Errorf("未找到频道，请检查URL是否正确")
+		return "", "", fmt.Errorf("error.no_channels_found")
 	}
 
 	// Extract x-tvg-url from M3U header if present
@@ -128,13 +128,13 @@ func (s *LiveSourceService) ValidateManualContent(content string) (string, strin
 	case "txt":
 		channels, err = m3u.ParseTXT(content)
 	default:
-		return "", "", fmt.Errorf("内容不符合 M3U 或 TXT (DIYP) 格式")
+		return "", "", fmt.Errorf("error.content_not_m3u_txt")
 	}
 	if err != nil {
 		return "", "", fmt.Errorf("content parsing failed: %w", err)
 	}
 	if len(channels) == 0 {
-		return "", "", fmt.Errorf("未找到频道")
+		return "", "", fmt.Errorf("error.no_channels")
 	}
 
 	// Extract x-tvg-url from M3U header if present
@@ -197,7 +197,7 @@ func createIPTVClient(config *iptv.Config) (iptv.Client, error) {
 	// case "zte":
 	//     return zte.NewClient(config), nil
 	default:
-		return nil, fmt.Errorf("不支持的IPTV平台: %s", config.Platform)
+		return nil, fmt.Errorf("unsupported IPTV platform: %s", config.Platform)
 	}
 }
 
@@ -256,7 +256,7 @@ func (s *LiveSourceService) parseManualContent(content string) ([]m3u.Channel, e
 	case "txt":
 		return m3u.ParseTXT(content)
 	default:
-		return nil, fmt.Errorf("无法识别的内容格式")
+		return nil, fmt.Errorf("error.unrecognized_format")
 	}
 }
 

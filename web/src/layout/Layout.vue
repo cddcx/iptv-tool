@@ -18,40 +18,40 @@
       >
         <el-menu-item index="/live-sources">
           <el-icon><VideoCamera /></el-icon>
-          <template #title>直播源</template>
+          <template #title>{{ $t('nav.live_sources') }}</template>
         </el-menu-item>
         <el-menu-item index="/epg-sources">
           <el-icon><Calendar /></el-icon>
-          <template #title>EPG源</template>
+          <template #title>{{ $t('nav.epg_sources') }}</template>
         </el-menu-item>
         <el-menu-item index="/logos">
           <el-icon><Picture /></el-icon>
-          <template #title>台标管理</template>
+          <template #title>{{ $t('nav.logos') }}</template>
         </el-menu-item>
         <el-menu-item index="/rules">
           <el-icon><Guide /></el-icon>
-          <template #title>聚合规则</template>
+          <template #title>{{ $t('nav.rules') }}</template>
         </el-menu-item>
         <el-menu-item index="/publish">
           <el-icon><Share /></el-icon>
-          <template #title>聚合发布</template>
+          <template #title>{{ $t('nav.publish') }}</template>
         </el-menu-item>
         <el-sub-menu index="/settings">
           <template #title>
             <el-icon><Setting /></el-icon>
-            <span>系统设置</span>
+            <span>{{ $t('nav.settings') }}</span>
           </template>
           <el-menu-item index="/settings/detect">
             <el-icon><Stopwatch /></el-icon>
-            <template #title>直播检测</template>
+            <template #title>{{ $t('nav.detect') }}</template>
           </el-menu-item>
           <el-menu-item index="/settings/password">
             <el-icon><Lock /></el-icon>
-            <template #title>修改密码</template>
+            <template #title>{{ $t('nav.password') }}</template>
           </el-menu-item>
           <el-menu-item index="/settings/about">
             <el-icon><InfoFilled /></el-icon>
-            <template #title>关于系统</template>
+            <template #title>{{ $t('nav.about') }}</template>
           </el-menu-item>
         </el-sub-menu>
       </el-menu>
@@ -65,20 +65,32 @@
     <el-container>
       <el-header class="top-header">
         <el-breadcrumb separator="/" style="margin-right: auto">
-          <el-breadcrumb-item>后台管理系统</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ $t('nav.admin_system') }}</el-breadcrumb-item>
         </el-breadcrumb>
+        <el-dropdown @command="switchLanguage" style="margin-right: 16px">
+          <span class="user-dropdown" style="font-size: 13px">
+            {{ currentLocale === 'zh' ? '中文' : 'EN' }}
+            <el-icon style="margin-left: 4px"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="zh">中文</el-dropdown-item>
+              <el-dropdown-item command="en">English</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-dropdown @command="handleCommand">
           <span class="user-dropdown">
             <el-avatar :size="28" style="background: #409eff; margin-right: 8px">
               <el-icon><UserFilled /></el-icon>
             </el-avatar>
-            管理员
+            {{ $t('nav.admin') }}
             <el-icon style="margin-left: 4px"><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="logout" divided>
-                <el-icon><SwitchButton /></el-icon>退出登录
+                <el-icon><SwitchButton /></el-icon>{{ $t('nav.logout') }}
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -97,11 +109,15 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
+import { loadLocale } from '../i18n'
 import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown, Lock, InfoFilled, Stopwatch } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { locale } = useI18n()
+const currentLocale = computed(() => locale.value)
 const isCollapsed = ref(false)
 const activeMenu = computed(() => route.path)
 function handleCommand(cmd) {
@@ -109,6 +125,9 @@ function handleCommand(cmd) {
     auth.logout()
     router.push('/login')
   }
+}
+async function switchLanguage(lang) {
+  await loadLocale(lang)
 }
 </script>
 <style scoped>

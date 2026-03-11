@@ -1,38 +1,52 @@
 <template>
   <div class="login-wrapper">
     <div class="login-bg">
+      <div class="lang-switch">
+        <el-dropdown @command="switchLanguage">
+          <span class="lang-dropdown">
+            {{ currentLocale === 'zh' ? '中文' : 'EN' }}
+            <el-icon style="margin-left: 4px"><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="zh">中文</el-dropdown-item>
+              <el-dropdown-item command="en">English</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
       <div class="login-card">
         <div class="login-header">
           <div class="login-logo">
             <el-icon :size="36" color="#409eff"><Monitor /></el-icon>
           </div>
           <h2 class="login-title">IPTV Tool</h2>
-          <p class="login-subtitle">管理员登录</p>
+          <p class="login-subtitle">{{ $t('login.admin_login') }}</p>
         </div>
         <el-form :model="form" :rules="rules" ref="formRef" size="large">
           <el-form-item prop="username">
-            <el-input v-model="form.username" placeholder="请输入用户名" :prefix-icon="User" @keyup.enter="handleLogin" />
+            <el-input v-model="form.username" :placeholder="$t('login.username_placeholder')" :prefix-icon="User" @keyup.enter="handleLogin" />
           </el-form-item>
           <el-form-item prop="password">
-            <el-input v-model="form.password" type="password" placeholder="请输入密码" :prefix-icon="Lock" show-password @keyup.enter="handleLogin" />
+            <el-input v-model="form.password" type="password" :placeholder="$t('login.password_placeholder')" :prefix-icon="Lock" show-password @keyup.enter="handleLogin" />
           </el-form-item>
           <!-- 验证码区域 - 动态显示 -->
           <el-form-item v-if="captchaRequired" prop="captchaCode">
             <div class="captcha-row">
-              <el-input v-model="form.captchaCode" placeholder="请输入验证码" :prefix-icon="Key" @keyup.enter="handleLogin" />
+              <el-input v-model="form.captchaCode" :placeholder="$t('login.captcha_placeholder')" :prefix-icon="Key" @keyup.enter="handleLogin" />
               <img
                 v-if="captchaImage"
                 :src="captchaImage"
                 class="captcha-img"
                 @click="refreshCaptcha"
-                title="点击刷新验证码"
-                alt="验证码"
+                :title="$t('login.captcha_refresh')"
+                :alt="$t('login.captcha_alt')"
               />
-              <div v-else class="captcha-placeholder" @click="refreshCaptcha">加载中...</div>
+              <div v-else class="captcha-placeholder" @click="refreshCaptcha">{{ $t('common.loading') }}</div>
             </div>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="handleLogin" :loading="loading" style="width: 100%" size="large">登录</el-button>
+            <el-button type="primary" @click="handleLogin" :loading="loading" style="width: 100%" size="large">{{ $t('login.login_btn') }}</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -41,16 +55,24 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { loadLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Key, Monitor } from '@element-plus/icons-vue'
+import { User, Lock, Key, Monitor, ArrowDown } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { t, locale } = useI18n()
+const currentLocale = computed(() => locale.value)
 const formRef = ref()
 const loading = ref(false)
+
+async function switchLanguage(lang) {
+  await loadLocale(lang)
+}
 
 // 验证码状态
 const captchaRequired = ref(false)
@@ -58,11 +80,11 @@ const captchaId = ref('')
 const captchaImage = ref('')
 
 const form = reactive({ username: '', password: '', captchaCode: '' })
-const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
-}
+const rules = computed(() => ({
+  username: [{ required: true, message: t('login.required_username'), trigger: 'blur' }],
+  password: [{ required: true, message: t('login.required_password'), trigger: 'blur' }],
+  captchaCode: [{ required: true, message: t('login.required_captcha'), trigger: 'blur' }],
+}))
 
 // 获取/刷新验证码
 async function refreshCaptcha() {
@@ -72,7 +94,7 @@ async function refreshCaptcha() {
     captchaImage.value = data.captcha_image
     form.captchaCode = ''
   } catch {
-    ElMessage.error('验证码获取失败')
+    ElMessage.error(t('login.captcha_fetch_failed'))
   }
 }
 
@@ -86,7 +108,7 @@ async function handleLogin() {
       captchaRequired.value ? captchaId.value : undefined,
       captchaRequired.value ? form.captchaCode : undefined
     )
-    ElMessage.success('登录成功')
+    ElMessage.success(t('login.login_success'))
     router.push('/')
   } catch (err) {
     const resp = err.response
@@ -94,7 +116,7 @@ async function handleLogin() {
 
     const { status, data } = resp
     if (status === 429) {
-      ElMessage.error((data && data.error) || '登录尝试过于频繁，请稍后再试')
+      ElMessage.error((data && data.error) || t('login.login_rate_limited'))
       return
     }
 
@@ -138,6 +160,24 @@ async function handleLogin() {
   background:
     radial-gradient(ellipse at 20% 50%, rgba(64, 158, 255, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(64, 158, 255, 0.05) 0%, transparent 40%);
+}
+.lang-switch {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+}
+.lang-dropdown {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+.lang-dropdown:hover {
+  color: #fff;
 }
 .login-card {
   width: 400px;

@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"iptv-tool-v2/internal/model"
+	"iptv-tool-v2/pkg/i18n"
 )
 
 // LogoController handles channel logo CRUD and upload
@@ -42,7 +43,7 @@ func (lc *LogoController) List(c *gin.Context) {
 func (lc *LogoController) Upload(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择文件"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.select_file")})
 		return
 	}
 
@@ -50,7 +51,7 @@ func (lc *LogoController) Upload(c *gin.Context) {
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	allowedExts := map[string]bool{".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".svg": true, ".webp": true, ".ico": true}
 	if !allowedExts[ext] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "不支持的文件类型，仅支持: png, jpg, jpeg, gif, svg, webp, ico"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.unsupported_file_type")})
 		return
 	}
 
@@ -61,7 +62,7 @@ func (lc *LogoController) Upload(c *gin.Context) {
 	var existing int64
 	model.DB.Model(&model.ChannelLogo{}).Where("name = ?", name).Count(&existing)
 	if existing > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("台标名称「%s」已存在，请重命名文件后再上传", name)})
+		c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.logo_name_exists_upload", name)})
 		return
 	}
 
@@ -70,7 +71,7 @@ func (lc *LogoController) Upload(c *gin.Context) {
 	urlPath := "/logo/" + fileName
 
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "文件保存失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(i18n.Lang(c), "error.file_save_failed") + ": " + err.Error()})
 		return
 	}
 
@@ -95,13 +96,13 @@ func (lc *LogoController) Upload(c *gin.Context) {
 func (lc *LogoController) BatchUpload(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "表单解析失败"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.form_parse_failed")})
 		return
 	}
 
 	files := form.File["files"]
 	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "未提供任何文件"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.no_files_provided")})
 		return
 	}
 
@@ -112,7 +113,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 	for _, file := range files {
 		ext := strings.ToLower(filepath.Ext(file.Filename))
 		if !allowedExts[ext] {
-			errors = append(errors, fmt.Sprintf("%s: 不支持的文件类型", file.Filename))
+			errors = append(errors, i18n.T(i18n.Lang(c), "error.batch_unsupported_type", file.Filename))
 			continue
 		}
 
@@ -122,7 +123,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 		var existing int64
 		model.DB.Model(&model.ChannelLogo{}).Where("name = ?", name).Count(&existing)
 		if existing > 0 {
-			errors = append(errors, fmt.Sprintf("%s: 台标名称已存在", file.Filename))
+			errors = append(errors, i18n.T(i18n.Lang(c), "error.batch_name_exists", file.Filename))
 			continue
 		}
 
@@ -131,7 +132,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 		urlPath := "/logo/" + fileName
 
 		if err := c.SaveUploadedFile(file, filePath); err != nil {
-			errors = append(errors, fmt.Sprintf("%s: 保存失败", file.Filename))
+			errors = append(errors, i18n.T(i18n.Lang(c), "error.batch_save_failed", file.Filename))
 			continue
 		}
 
@@ -142,7 +143,7 @@ func (lc *LogoController) BatchUpload(c *gin.Context) {
 		}
 		if err := model.DB.Create(&logo).Error; err != nil {
 			os.Remove(filePath)
-			errors = append(errors, fmt.Sprintf("%s: 数据库错误", file.Filename))
+			errors = append(errors, i18n.T(i18n.Lang(c), "error.batch_db_error", file.Filename))
 			continue
 		}
 
@@ -165,13 +166,13 @@ type UpdateLogoRequest struct {
 func (lc *LogoController) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var req UpdateLogoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_request_params")})
 		return
 	}
 
@@ -179,13 +180,13 @@ func (lc *LogoController) Update(c *gin.Context) {
 	var existing int64
 	model.DB.Model(&model.ChannelLogo{}).Where("name = ? AND id != ?", req.Name, id).Count(&existing)
 	if existing > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "该台标名称已存在，请换一个名称"})
+		c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.logo_name_exists")})
 		return
 	}
 
 	var logo model.ChannelLogo
 	if err := model.DB.First(&logo, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该台标"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.logo_not_found")})
 		return
 	}
 
@@ -204,13 +205,13 @@ func (lc *LogoController) Update(c *gin.Context) {
 func (lc *LogoController) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var logo model.ChannelLogo
 	if err := model.DB.First(&logo, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该台标"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.logo_not_found")})
 		return
 	}
 
@@ -223,5 +224,5 @@ func (lc *LogoController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "台标已删除"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.logo_deleted")})
 }

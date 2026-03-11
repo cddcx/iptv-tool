@@ -1,20 +1,20 @@
 <template>
   <div>
-    <h3 style="margin: 0 0 16px">直播检测设置</h3>
+    <h3 style="margin: 0 0 16px">{{ $t('settings_detect.title') }}</h3>
 
     <el-card shadow="never" style="max-width: 700px">
       <template #header>
-        <span>ffprobe 可执行文件</span>
+        <span>{{ $t('settings_detect.ffprobe_section') }}</span>
       </template>
 
       <el-descriptions :column="1" border>
-        <el-descriptions-item label="当前版本">
+        <el-descriptions-item :label="$t('settings_detect.current_version')">
           <span v-if="ffprobeVersion" style="color: #67c23a">
             {{ ffprobeVersion }}
-            <el-tag v-if="ffprobeSource === 'uploaded'" size="small" type="success" style="margin-left: 8px">用户上传优先</el-tag>
-            <el-tag v-else-if="ffprobeSource === 'system'" size="small" type="info" style="margin-left: 8px">系统内置</el-tag>
+            <el-tag v-if="ffprobeSource === 'uploaded'" size="small" type="success" style="margin-left: 8px">{{ $t('settings_detect.user_uploaded') }}</el-tag>
+            <el-tag v-else-if="ffprobeSource === 'system'" size="small" type="info" style="margin-left: 8px">{{ $t('settings_detect.system_builtin') }}</el-tag>
           </span>
-          <span v-else style="color: #909399">未配置或系统未安装</span>
+          <span v-else style="color: #909399">{{ $t('settings_detect.not_configured') }}</span>
         </el-descriptions-item>
       </el-descriptions>
 
@@ -29,32 +29,32 @@
           :before-upload="beforeUpload"
         >
           <el-button type="primary" :loading="uploading">
-            {{ ffprobeVersion ? '更新 ffprobe' : '上传 ffprobe' }}
+            {{ ffprobeVersion ? $t('settings_detect.update_ffprobe') : $t('settings_detect.upload_ffprobe') }}
           </el-button>
         </el-upload>
         <div style="color: #909399; font-size: 12px; margin-top: 8px; line-height: 1.6">
-          请上传 ffprobe 可执行文件。上传后系统将自动验证文件有效性。<br/>
-          ffprobe 包含在 FFmpeg 发行包中，如需下载请前往 <a href="https://ffmpeg.org/download.html" target="_blank" rel="noopener noreferrer" style="color: var(--el-color-primary); text-decoration: none;">ffmpeg 官网下载页面</a>
+          {{ $t('settings_detect.upload_help') }}<br/>
+          {{ $t('settings_detect.ffmpeg_download_prefix') }} <a href="https://ffmpeg.org/download.html" target="_blank" rel="noopener noreferrer" style="color: var(--el-color-primary); text-decoration: none;">{{ $t('settings_detect.ffmpeg_download_link') }}</a>
         </div>
       </div>
     </el-card>
 
     <el-card shadow="never" style="max-width: 700px; margin-top: 16px">
       <template #header>
-        <span>检测参数</span>
+        <span>{{ $t('settings_detect.params_section') }}</span>
       </template>
 
       <el-form :model="configForm" label-width="120px">
-        <el-form-item label="检测并发数">
+        <el-form-item :label="$t('settings_detect.concurrency')">
           <el-input-number v-model="configForm.concurrency" :min="1" :max="30" />
-          <span style="margin-left: 12px; color: #909399; font-size: 12px">范围 1-30，默认 10</span>
+          <span style="margin-left: 12px; color: #909399; font-size: 12px">{{ $t('settings_detect.concurrency_help') }}</span>
         </el-form-item>
-        <el-form-item label="检测超时">
+        <el-form-item :label="$t('settings_detect.timeout')">
           <el-input-number v-model="configForm.timeout" :min="1" :max="30" />
-          <span style="margin-left: 12px; color: #909399; font-size: 12px">范围 1-30 秒，默认 5 秒</span>
+          <span style="margin-left: 12px; color: #909399; font-size: 12px">{{ $t('settings_detect.timeout_help') }}</span>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="saveConfig" :loading="saving">保存配置</el-button>
+          <el-button type="primary" @click="saveConfig" :loading="saving">{{ $t('settings_detect.save_config') }}</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -63,8 +63,11 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import api from '../api'
+
+const { t } = useI18n()
 
 const ffprobeVersion = ref('')
 const ffprobeSource = ref('')
@@ -108,16 +111,16 @@ function onUploadSuccess(response) {
     ffprobeVersion.value = response.ffprobe_version
     ffprobeSource.value = response.ffprobe_source || 'uploaded'
   }
-  ElMessage.success(response.message || 'ffprobe 上传成功')
+  ElMessage.success(response.message || t('settings_detect.upload_success'))
 }
 
 function onUploadError(error) {
   uploading.value = false
   try {
     const resp = JSON.parse(error.message)
-    ElMessage.error(resp.error || '上传失败')
+    ElMessage.error(resp.error || t('settings_detect.upload_failed'))
   } catch {
-    ElMessage.error('上传失败')
+    ElMessage.error(t('settings_detect.upload_failed'))
   }
 }
 
@@ -128,7 +131,7 @@ async function saveConfig() {
       concurrency: configForm.concurrency,
       timeout: configForm.timeout,
     })
-    ElMessage.success('配置已保存')
+    ElMessage.success(t('settings_detect.config_saved'))
   } catch {}
   finally { saving.value = false }
 }

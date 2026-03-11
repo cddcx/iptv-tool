@@ -1,12 +1,27 @@
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import i18n, { loadLocale } from './i18n'
 import './style.css'
+
+// Global tooltip for truncated table headers
+document.addEventListener('mouseover', (e) => {
+  if (!e.target || !e.target.closest) return;
+  const cell = e.target.closest('.el-table th.el-table__cell > .cell');
+  if (cell) {
+    if (cell.scrollWidth > cell.clientWidth) {
+      if (!cell.hasAttribute('title')) {
+        cell.setAttribute('title', cell.innerText);
+      }
+    } else {
+      cell.removeAttribute('title');
+    }
+  }
+});
 
 const app = createApp(App)
 
@@ -14,7 +29,12 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)
 }
 
-app.use(ElementPlus, { locale: zhCn })
+app.use(ElementPlus)
 app.use(createPinia())
+app.use(i18n)
 app.use(router)
-app.mount('#app')
+
+// Load initial locale before mounting
+loadLocale(i18n.global.locale.value).then(() => {
+  app.mount('#app')
+})

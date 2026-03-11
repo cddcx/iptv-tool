@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"iptv-tool-v2/internal/model"
+	"iptv-tool-v2/pkg/i18n"
 )
 
 // RuleController handles CRUD for aggregation rules
@@ -32,13 +33,13 @@ func (rc *RuleController) List(c *gin.Context) {
 func (rc *RuleController) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var rule model.AggregationRule
 	if err := model.DB.First(&rule, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该规则"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.rule_not_found")})
 		return
 	}
 	c.JSON(http.StatusOK, rule)
@@ -54,15 +55,15 @@ type CreateRuleRequest struct {
 func (rc *RuleController) Create(c *gin.Context) {
 	var req CreateRuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_params") + ": " + err.Error()})
 		return
 	}
 
-	// 【新增】检查规则名称是否已存在
+	// Check rule name uniqueness
 	var existing int64
 	model.DB.Model(&model.AggregationRule{}).Where("name = ?", req.Name).Count(&existing)
 	if existing > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "该规则名称已存在，请换一个名称"})
+		c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.rule_name_exists")})
 		return
 	}
 
@@ -93,29 +94,29 @@ type UpdateRuleRequest struct {
 func (rc *RuleController) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	var rule model.AggregationRule
 	if err := model.DB.First(&rule, uint(id)).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该规则"})
+		c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.rule_not_found")})
 		return
 	}
 
 	var req UpdateRuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "参数无效: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_params") + ": " + err.Error()})
 		return
 	}
 
 	updates := make(map[string]interface{})
 	if req.Name != nil {
-		// 【新增】检查更新的新名称是否和其他规则重名
+		// Check rule name uniqueness (excluding self)
 		var existing int64
 		model.DB.Model(&model.AggregationRule{}).Where("name = ? AND id != ?", *req.Name, id).Count(&existing)
 		if existing > 0 {
-			c.JSON(http.StatusConflict, gin.H{"error": "该规则名称已存在，请换一个名称"})
+			c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.rule_name_exists")})
 			return
 		}
 		updates["name"] = *req.Name
@@ -145,13 +146,13 @@ func (rc *RuleController) Update(c *gin.Context) {
 func (rc *RuleController) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_id")})
 		return
 	}
 
 	ruleIDStr := strconv.FormatUint(id, 10)
 
-	// 检查该规则是否被发布接口引用
+	// Check if rule is referenced by any publish interface
 	var interfaces []model.PublishInterface
 	if err := model.DB.Find(&interfaces).Error; err == nil {
 		for _, pi := range interfaces {
@@ -160,7 +161,7 @@ func (rc *RuleController) Delete(c *gin.Context) {
 			}
 			for _, rID := range strings.Split(pi.RuleIDs, ",") {
 				if strings.TrimSpace(rID) == ruleIDStr {
-					c.JSON(http.StatusConflict, gin.H{"error": "该规则正被发布接口「" + pi.Name + "」引用，请先移除引用后再删除"})
+					c.JSON(http.StatusConflict, gin.H{"error": i18n.T(i18n.Lang(c), "error.rule_ref_publish", pi.Name)})
 					return
 				}
 			}
@@ -173,5 +174,5 @@ func (rc *RuleController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "规则已删除"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.rule_deleted")})
 }

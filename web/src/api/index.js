@@ -1,17 +1,21 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import i18n from '../i18n'
+
+const { t } = i18n.global
 
 const api = axios.create({
   baseURL: '/api',
   timeout: 30000,
 })
 
-// Request interceptor: attach JWT token
+// Request interceptor: attach JWT token and language header
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+  config.headers['X-Language'] = localStorage.getItem('locale') || 'en'
   return config
 })
 
@@ -24,26 +28,24 @@ api.interceptors.response.use(
       const isLoginRequest = error.config && error.config.url === '/login' && error.config.method === 'post'
 
       if (status === 429) {
-        // 频率限制 - 登录请求由 Login.vue 自行处理，其他请求全局提示
         if (!isLoginRequest) {
-          ElMessage.error((data && data.error) || '请求过于频繁，请稍后再试')
+          ElMessage.error((data && data.error) || t('api_interceptor.rate_limited'))
         }
       } else if (status === 403 && isLoginRequest) {
-        // 验证码相关的 403 由 Login.vue 自行处理，不在此全局弹出
+        // Captcha-related 403 handled by Login.vue
       } else if (status === 401) {
         if (isLoginRequest) {
-          // 登录请求的 401 由 Login.vue 自行处理，不在此全局弹出
+          // Login 401 handled by Login.vue
         } else {
-          // 其他请求的 401 表示 token 过期
           localStorage.removeItem('token')
           window.location.hash = '#/login'
-          ElMessage.error('登录已过期，请重新登录')
+          ElMessage.error(t('api_interceptor.session_expired'))
         }
       } else if (data && data.error) {
         ElMessage.error(data.error)
       }
     } else {
-      ElMessage.error('网络请求失败')
+      ElMessage.error(t('api_interceptor.network_error'))
     }
     return Promise.reject(error)
   }

@@ -13,6 +13,7 @@ import (
 	"iptv-tool-v2/internal/service"
 	"iptv-tool-v2/internal/version"
 	"iptv-tool-v2/pkg/auth"
+	"iptv-tool-v2/pkg/i18n"
 	"iptv-tool-v2/pkg/utils"
 )
 
@@ -61,22 +62,27 @@ func (sc *SystemController) Init(c *gin.Context) {
 
 	plainPassword, err := auth.DecryptRSA(req.Password)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "密码解密失败，请刷新页面重试"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.decrypt_failed")})
 		return
 	}
 
 	user, err := sc.userService.Register(req.Username, plainPassword)
 	if err != nil {
+		lang := i18n.Lang(c)
 		status := http.StatusInternalServerError
+		msg := err.Error()
 		if err == service.ErrUserExists {
 			status = http.StatusConflict
+			msg = i18n.T(lang, "error.user_exists")
+		} else {
+			msg = i18n.T(lang, msg)
 		}
-		c.JSON(status, gin.H{"error": err.Error()})
+		c.JSON(status, gin.H{"error": msg})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":  "系统初始化成功",
+		"message":  i18n.T(i18n.Lang(c), "message.init_success"),
 		"username": user.Username,
 	})
 }
@@ -97,7 +103,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 	if !globalRateLimiter.Allow(clientIP) {
 		slog.Warn("Login rate limit exceeded", "client_ip", clientIP)
 		c.JSON(http.StatusTooManyRequests, gin.H{
-			"error": "登录尝试过于频繁，请稍后再试",
+			"error": i18n.T(i18n.Lang(c), "error.rate_limited"),
 		})
 		return
 	}
@@ -114,7 +120,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 		if req.CaptchaID == "" || req.CaptchaCode == "" {
 			slog.Warn("Captcha required due to multiple failed attempts", "username", req.Username, "client_ip", clientIP)
 			c.JSON(http.StatusForbidden, gin.H{
-				"error":            "请完成验证码校验",
+				"error":            i18n.T(i18n.Lang(c), "error.captcha_required"),
 				"captcha_required": true,
 			})
 			return
@@ -123,7 +129,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 		if !captchaStore.Verify(req.CaptchaID, req.CaptchaCode, true) {
 			slog.Warn("Invalid captcha attempt", "username", req.Username, "client_ip", clientIP)
 			c.JSON(http.StatusForbidden, gin.H{
-				"error":            "验证码错误",
+				"error":            i18n.T(i18n.Lang(c), "error.captcha_wrong"),
 				"captcha_required": true,
 			})
 			return
@@ -133,7 +139,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 	// ④ 用户名密码校验
 	plainPassword, err := auth.DecryptRSA(req.Password)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "密码解密失败，请刷新页面重试"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.decrypt_failed")})
 		return
 	}
 
@@ -141,7 +147,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 	if err != nil {
 		// 系统未初始化的特殊状态码
 		if err == service.ErrSystemNotInit {
-			c.JSON(http.StatusPreconditionFailed, gin.H{"error": err.Error()})
+			c.JSON(http.StatusPreconditionFailed, gin.H{"error": i18n.T(i18n.Lang(c), "error.system_not_init")})
 			return
 		}
 
@@ -151,7 +157,7 @@ func (sc *SystemController) Login(c *gin.Context) {
 
 		slog.Warn("Login failed: invalid credentials", "username", req.Username, "client_ip", clientIP, "need_captcha", needCaptcha)
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error":            "用户名或密码错误",
+			"error":            i18n.T(i18n.Lang(c), "error.invalid_credentials"),
 			"captcha_required": needCaptcha,
 		})
 		return
@@ -181,7 +187,7 @@ func (sc *SystemController) GetCaptcha(c *gin.Context) {
 	captcha := base64Captcha.NewCaptcha(driver, captchaStore)
 	id, b64s, _, err := captcha.Generate()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "验证码生成失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(i18n.Lang(c), "error.captcha_gen_failed")})
 		return
 	}
 
@@ -210,22 +216,22 @@ func (sc *SystemController) ChangePassword(c *gin.Context) {
 
 	plainOldPassword, err := auth.DecryptRSA(req.OldPassword)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "旧密码解密失败，请刷新页面重试"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.old_decrypt_failed")})
 		return
 	}
 
 	plainNewPassword, err := auth.DecryptRSA(req.NewPassword)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "新密码解密失败，请刷新页面重试"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.new_decrypt_failed")})
 		return
 	}
 
 	if err := sc.userService.ChangePassword(userID.(uint), plainOldPassword, plainNewPassword); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), err.Error())})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "密码修改成功"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.password_changed")})
 }
 
 // CrackKeyRequest is the request body for cracking the 3DES key
@@ -247,7 +253,7 @@ func (sc *SystemController) CrackKey(c *gin.Context) {
 
 	key, err := utils.CrackAuthenticator(ctx, req.Authenticator)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "破解失败: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(i18n.Lang(c), "error.crack_failed") + ": " + err.Error()})
 		return
 	}
 
@@ -259,7 +265,7 @@ func (sc *SystemController) CrackKey(c *gin.Context) {
 func GetEPGStrategies(c *gin.Context) {
 	strategies := huawei.GetAllEPGStrategies()
 	result := make([]gin.H, 0, len(strategies)+1)
-	result = append(result, gin.H{"value": "auto", "label": "自动检测"})
+	result = append(result, gin.H{"value": "auto", "label": i18n.T(i18n.Lang(c), "label.auto_detect")})
 	for _, s := range strategies {
 		result = append(result, gin.H{"value": s.Name(), "label": s.Name()})
 	}

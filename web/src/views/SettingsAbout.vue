@@ -1,23 +1,23 @@
 <template>
   <div class="settings-page">
-    <h3 style="margin: 0 0 20px">关于系统</h3>
+    <h3 style="margin: 0 0 20px">{{ $t('settings_about.title') }}</h3>
 
     <el-card shadow="hover" class="settings-card">
       <template #header>
         <div style="display: flex; align-items: center; gap: 8px">
           <el-icon :size="18"><InfoFilled /></el-icon>
-          <span>关于系统</span>
+          <span>{{ $t('settings_about.title') }}</span>
         </div>
       </template>
       <el-descriptions :column="1" border size="small">
-        <el-descriptions-item label="系统名称">IPTV Tool</el-descriptions-item>
-        <el-descriptions-item label="系统版本">
+        <el-descriptions-item :label="$t('settings_about.system_name')">IPTV Tool</el-descriptions-item>
+        <el-descriptions-item :label="$t('settings_about.system_version')">
           <el-tag v-if="appVersion" size="small" type="primary">{{ appVersion }}</el-tag>
-          <span v-else style="color: #909399; font-size: 12px">获取中...</span>
+          <span v-else style="color: #909399; font-size: 12px">{{ $t('settings_about.fetching') }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="技术栈">Vue 3 + Element Plus / Go + Gin + SQLite</el-descriptions-item>
-        <el-descriptions-item label="运行模式">单文件部署 (go:embed)</el-descriptions-item>
-        <el-descriptions-item label="开源仓库">
+        <el-descriptions-item :label="$t('settings_about.tech_stack')">Vue 3 + Element Plus / Go + Gin + SQLite</el-descriptions-item>
+        <el-descriptions-item :label="$t('settings_about.runtime_mode')">{{ $t('settings_about.runtime_value') }}</el-descriptions-item>
+        <el-descriptions-item :label="$t('settings_about.repo')">
           <div style="display: flex; align-items: center; gap: 16px">
             <el-link href="https://github.com/super321/iptv-tool" target="_blank" :underline="false" style="display: flex; align-items: center; gap: 4px; color: #303133">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -34,11 +34,11 @@
       <template #header>
         <div style="display: flex; align-items: center; gap: 8px">
           <el-icon :size="18"><Coffee /></el-icon>
-          <span>赞助支持</span>
+          <span>{{ $t('settings_about.sponsor') }}</span>
         </div>
       </template>
 
-      <p class="sponsor-desc">如果你觉得这个项目对你有帮助，可以考虑赞助支持开发者，感谢你的慷慨！</p>
+      <p class="sponsor-desc">{{ $t('settings_about.sponsor_desc') }}</p>
 
       <div class="sponsor-list">
         <!-- Ko-fi -->
@@ -56,7 +56,7 @@
           </div>
           <el-button type="warning" class="kofi-btn" @click="openLink('https://ko-fi.com/super321')">
             <el-icon style="margin-right: 4px"><Link /></el-icon>
-            前往赞助
+            {{ $t('settings_about.go_sponsor') }}
           </el-button>
         </div>
 
@@ -70,13 +70,13 @@
               </svg>
             </div>
             <div class="sponsor-text">
-              <span class="sponsor-name">爱发电</span>
-              <span class="sponsor-sub">国内赞助平台</span>
+              <span class="sponsor-name">{{ $t('settings_about.afdian') }}</span>
+              <span class="sponsor-sub">{{ $t('settings_about.afdian_sub') }}</span>
             </div>
           </div>
           <el-button type="primary" class="afdian-btn" @click="openLink('https://afdian.com/a/super321')">
             <el-icon style="margin-right: 4px"><Link /></el-icon>
-            前往赞助
+            {{ $t('settings_about.go_sponsor') }}
           </el-button>
         </div>
 
@@ -90,24 +90,24 @@
             </div>
             <div class="sponsor-text">
               <span class="sponsor-name">Ethereum</span>
-              <span class="sponsor-sub">ETH / ERC20 代币</span>
+              <span class="sponsor-sub">{{ $t('settings_about.eth_sub') }}</span>
             </div>
           </div>
           <el-button type="info" @click="showEthDialog = true">
             <el-icon style="margin-right: 4px"><Wallet /></el-icon>
-            查看地址
+            {{ $t('settings_about.view_address') }}
           </el-button>
         </div>
       </div>
     </el-card>
 
     <!-- Ethereum Detail Dialog -->
-    <el-dialog v-model="showEthDialog" title="Ethereum 赞助" width="400px" align-center>
+    <el-dialog v-model="showEthDialog" :title="$t('settings_about.eth_title')" width="400px" align-center>
       <div class="eth-dialog-content">
         <img :src="ethQrCode" alt="Ethereum QR Code" class="eth-qrcode" />
-        <p class="eth-note">仅支持 Ethereum 资产 (ERC20)</p>
+        <p class="eth-note">{{ $t('settings_about.eth_note') }}</p>
         <div class="eth-address-box">
-          <span class="eth-label">钱包地址</span>
+          <span class="eth-label">{{ $t('settings_about.wallet_address') }}</span>
           <el-input
             v-model="ethAddress"
             readonly
@@ -127,11 +127,14 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { InfoFilled, Link, CopyDocument, Wallet, Star } from '@element-plus/icons-vue'
 import { Coffee } from '@element-plus/icons-vue'
 import ethQrCode from '../assets/eth_qrcode.jpg'
 import api from '../api'
+
+const { t } = useI18n()
 
 const showEthDialog = ref(false)
 const ethAddress = ref('0x6989acE6Eb2CC196fAFce3cEcAEC6b6b63716C83')
@@ -153,9 +156,9 @@ function openLink(url) {
 async function copyAddress() {
   try {
     await navigator.clipboard.writeText(ethAddress.value)
-    ElMessage.success('地址已复制到剪贴板')
+    ElMessage.success(t('settings_about.copied'))
   } catch {
-    ElMessage.error('复制失败，请手动复制')
+    ElMessage.error(t('settings_about.copy_failed'))
   }
 }
 </script>

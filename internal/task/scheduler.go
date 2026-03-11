@@ -48,14 +48,15 @@ func BuildCronExpr(cronTime string) (string, error) {
 	}
 }
 
-// CronTimeOptions returns the available options for the frontend dropdown
+// CronTimeOptions returns the available options for the frontend dropdown.
+// Labels are i18n keys that should be translated at the handler level.
 var CronTimeOptions = []map[string]string{
-	{"value": "1h", "label": "每1小时"},
-	{"value": "2h", "label": "每2小时"},
-	{"value": "4h", "label": "每4小时"},
-	{"value": "6h", "label": "每6小时"},
-	{"value": "12h", "label": "每12小时"},
-	{"value": "24h", "label": "每天"},
+	{"value": "1h", "label": "label.cron_1h"},
+	{"value": "2h", "label": "label.cron_2h"},
+	{"value": "4h", "label": "label.cron_4h"},
+	{"value": "6h", "label": "label.cron_6h"},
+	{"value": "12h", "label": "label.cron_12h"},
+	{"value": "24h", "label": "label.cron_24h"},
 }
 
 // Scheduler manages all cron jobs for live sources and EPG sources

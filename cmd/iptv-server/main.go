@@ -10,7 +10,9 @@ import (
 	"iptv-tool-v2/internal/api"
 	"iptv-tool-v2/internal/model"
 	"iptv-tool-v2/internal/task"
+	"iptv-tool-v2/locales"
 	"iptv-tool-v2/pkg/auth"
+	"iptv-tool-v2/pkg/i18n"
 	"iptv-tool-v2/pkg/logger"
 	"iptv-tool-v2/web"
 
@@ -69,6 +71,9 @@ func main() {
 
 	// Initialize JWT
 	auth.InitJWTSecret(*jwtSecret)
+
+	// Initialize i18n
+	i18n.Init(locales.FS)
 
 	// Initialize and start scheduler
 	scheduler := task.NewScheduler(dataDir)

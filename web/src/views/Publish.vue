@@ -1,72 +1,72 @@
 <template>
   <div>
     <div style="display: flex; justify-content: space-between; margin-bottom: 16px">
-      <h3 style="margin: 0">聚合发布</h3>
-      <el-button type="primary" @click="showCreate">新增发布接口</el-button>
+      <h3 style="margin: 0">{{ $t('publish.title') }}</h3>
+      <el-button type="primary" @click="showCreate">{{ $t('publish.add') }}</el-button>
     </div>
     <el-table :data="interfaces" v-loading="loading" border stripe>
       <el-table-column prop="id" label="ID" width="60" />
-      <el-table-column prop="name" label="名称" width="130" show-overflow-tooltip />
-      <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip>
+      <el-table-column prop="name" :label="$t('common.name')" min-width="140" show-overflow-tooltip />
+      <el-table-column prop="description" :label="$t('common.description')" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">{{ row.description || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="path" label="路径" min-width="120">
+      <el-table-column prop="path" :label="$t('publish.col_path')" min-width="150">
         <template #default="{ row }">
           <el-link type="primary" :href="`/sub/${row.type}/${row.path}`" target="_blank">/sub/{{ row.type }}/{{ row.path }}</el-link>
         </template>
       </el-table-column>
-      <el-table-column prop="type" label="类型" width="80">
+      <el-table-column prop="type" :label="$t('common.type')" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.type === 'live' ? '' : 'success'" size="small">{{ row.type === 'live' ? '直播' : 'EPG' }}</el-tag>
+          <el-tag :type="row.type === 'live' ? '' : 'success'" size="small">{{ row.type === 'live' ? $t('publish.type_live') : $t('publish.type_epg') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="format" label="格式" width="80">
+      <el-table-column prop="format" :label="$t('publish.col_format')" width="100">
         <template #default="{ row }">
           <el-tag size="small" type="info">{{ row.format }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="80">
+      <el-table-column prop="status" :label="$t('common.status')" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.status ? 'success' : 'info'" size="small">{{ row.status ? '启用' : '禁用' }}</el-tag>
+          <el-tag :type="row.status ? 'success' : 'info'" size="small">{{ row.status ? $t('common.enabled') : $t('common.disabled') }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="应用规则数" width="100" align="center">
+      <el-table-column :label="$t('publish.col_rule_count')" width="120" align="center">
         <template #default="{ row }">
           <el-tag size="small" type="info">{{ parseIds(row.rule_ids).length }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="100" fixed="right" align="center">
+      <el-table-column :label="$t('common.operations')" width="120" fixed="right" align="center">
         <template #default="{ row }">
-          <el-tooltip content="编辑" placement="top" :show-after="500">
+          <el-tooltip :content="$t('common.edit')" placement="top" :show-after="500">
             <el-button :icon="Edit" size="small" circle type="primary" @click="showEdit(row)" />
           </el-tooltip>
-          <el-tooltip content="删除" placement="top" :show-after="500">
+          <el-tooltip :content="$t('common.delete')" placement="top" :show-after="500">
             <el-button :icon="Delete" size="small" circle type="danger" @click="handleDelete(row)" />
           </el-tooltip>
         </template>
       </el-table-column>
     </el-table>
     <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑发布接口' : '新增发布接口'" width="600px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('publish.edit_title') : $t('publish.add_title')" width="600px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
-        <el-form-item label="名称" prop="name">
+        <el-form-item :label="$t('common.name')" prop="name">
           <el-input v-model="form.name" />
         </el-form-item>
-        <el-form-item label="描述">
-          <el-input v-model="form.description" placeholder="可选的描述信息" />
+        <el-form-item :label="$t('common.description')">
+          <el-input v-model="form.description" :placeholder="$t('publish.desc_placeholder')" />
         </el-form-item>
-        <el-form-item label="路径" prop="path">
+        <el-form-item :label="$t('publish.col_path')" prop="path">
           <el-input v-model="form.path" placeholder="my_list">
             <template #prepend>/sub/{{ form.type }}/</template>
           </el-input>
         </el-form-item>
-        <el-form-item label="类型" prop="type" v-if="!isEdit">
+        <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
           <el-radio-group v-model="form.type" @change="onTypeChange">
-            <el-radio value="live">直播</el-radio>
-            <el-radio value="epg">EPG</el-radio>
+            <el-radio value="live">{{ $t('publish.type_live') }}</el-radio>
+            <el-radio value="epg">{{ $t('publish.type_epg') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="格式" prop="format">
+        <el-form-item :label="$t('publish.col_format')" prop="format">
           <el-select v-model="form.format" style="width: 100%">
             <template v-if="form.type === 'live'">
               <el-option label="M3U" value="m3u" />
@@ -79,8 +79,8 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="数据源" prop="source_ids_arr">
-          <el-select v-model="form.source_ids_arr" multiple placeholder="请选择启用的数据源" style="width: 100%" @change="onSourceChange">
+        <el-form-item :label="$t('publish.data_source')" prop="source_ids_arr">
+          <el-select v-model="form.source_ids_arr" multiple :placeholder="$t('publish.select_source_placeholder')" style="width: 100%" @change="onSourceChange">
             <el-option v-for="src in availableSources" :key="src.id" :label="src.name" :value="src.id">
               <span style="float: left">{{ src.name }}</span>
               <span style="float: right; color: #8492a6; font-size: 13px" v-if="src.description">{{ src.description }}</span>
@@ -89,10 +89,10 @@
         </el-form-item>
 
         <!-- 已选直播数据源的过滤无效数据开关 -->
-        <el-form-item v-if="form.type === 'live' && form.source_ids_arr.length > 0" label="过滤无效数据">
+        <el-form-item v-if="form.type === 'live' && form.source_ids_arr.length > 0" :label="$t('publish.filter_invalid')">
           <div style="width: 100%">
             <div style="color: #909399; font-size: 12px; margin-bottom: 8px; line-height: 1.4">
-              开启后，聚合时将自动过滤检测超时的无效频道
+              {{ $t('publish.filter_invalid_help') }}
             </div>
             <div v-for="srcId in form.source_ids_arr" :key="srcId"
               style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; margin-bottom: 4px; background: var(--el-fill-color-light); border-radius: 4px;">
@@ -107,8 +107,8 @@
         </el-form-item>
 
         <!-- 新的聚合规则多选下拉框 -->
-        <el-form-item label="聚合规则" prop="rule_ids_arr">
-          <el-select v-model="form.rule_ids_arr" multiple placeholder="可选，按选择顺序执行匹配" style="width: 100%">
+        <el-form-item :label="$t('publish.agg_rules')" prop="rule_ids_arr">
+          <el-select v-model="form.rule_ids_arr" multiple :placeholder="$t('publish.agg_rules_placeholder')" style="width: 100%">
             <el-option 
               v-for="rule in filteredRules" 
               :key="rule.id" 
@@ -122,53 +122,51 @@
         </el-form-item>
 
         <!-- 关联策略 (tvg-id) -->
-        <el-form-item label="关联策略" v-if="(form.type === 'epg' && form.format === 'xmltv') || (form.type === 'live' && form.format === 'm3u')">
+        <el-form-item :label="$t('publish.tvg_id_mode')" v-if="(form.type === 'epg' && form.format === 'xmltv') || (form.type === 'live' && form.format === 'm3u')">
           <el-radio-group v-model="form.tvg_id_mode">
-            <el-radio value="channel_id">使用原始频道ID (默认)</el-radio>
-            <el-radio value="name">使用频道别名 / 名称</el-radio>
+            <el-radio value="channel_id">{{ $t('publish.tvg_id_channel_id') }}</el-radio>
+            <el-radio value="name">{{ $t('publish.tvg_id_name') }}</el-radio>
           </el-radio-group>
           <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
-            此项决定 M3U 的 "tvg-id" 或 XMLTV 的 "channel id" 取值。<br/>
-            第三方播放器主要依赖此 ID 进行台标与节目的精准匹配。
+            {{ $t('publish.tvg_id_help') }}
           </div>
         </el-form-item>
 
         <template v-if="form.type === 'live'">
-          <el-form-item label="直播地址" prop="address_type">
+          <el-form-item :label="$t('publish.live_address')" prop="address_type">
             <el-select v-model="form.address_type" style="width: 100%">
-              <el-option label="单播优先" value="unicast" />
-              <el-option label="组播优先 (默认)" value="multicast" />
+              <el-option :label="$t('publish.unicast_first')" value="unicast" />
+              <el-option :label="$t('publish.multicast_first')" value="multicast" />
             </el-select>
             <div style="color: #909399; font-size: 12px; margin-top: 4px; line-height: 1.4">
-              单播优先：提取单播地址(HTTP/RTSP等)，若无则尝试借用时移地址替补<br/>
-              组播优先：优先提取组播地址(IGMP)，无组播时平滑降级使用单播
+              {{ $t('publish.address_type_help') }}
             </div>
           </el-form-item>
 
-          <el-form-item label="组播协议" v-if="form.address_type === 'multicast'">
+          <el-form-item :label="$t('publish.multicast_protocol')" v-if="form.address_type === 'multicast'">
             <el-select v-model="form.multicast_type" style="width: 100%">
-              <el-option label="UDPXY代理 (默认)" value="udpxy" />
-              <el-option label="IGMP直连" value="igmp" />
-              <el-option label="RTP直连" value="rtp" />
+              <el-option :label="$t('publish.udpxy_proxy')" value="udpxy" />
+              <el-option :label="$t('publish.igmp_direct')" value="igmp" />
+              <el-option :label="$t('publish.rtp_direct')" value="rtp" />
             </el-select>
           </el-form-item>
 
-          <el-form-item label="UDPxy地址" v-if="form.address_type === 'multicast' && form.multicast_type === 'udpxy'" :rules="[{ required: true, message: '请填写UDPxy地址', trigger: 'blur' }]">
-            <el-input v-model="form.udpxy_url" placeholder="例如: http://192.168.1.1:4022" />
+          <el-form-item :label="$t('publish.udpxy_address')" v-if="form.address_type === 'multicast' && form.multicast_type === 'udpxy'" :rules="[{ required: true, message: $t('publish.udpxy_address_required'), trigger: 'blur' }]">
+            <el-input v-model="form.udpxy_url" :placeholder="$t('publish.udpxy_placeholder')" />
           </el-form-item>
 
-          <el-form-item label="回看模板" v-if="form.format === 'm3u'">
+          <el-form-item :label="$t('publish.catchup_template')" v-if="form.format === 'm3u'">
             <div style="width: 100%;">
-              <el-input v-model="form.m3u_catchup_template" placeholder="选填，若需回看功能请填充相关模板参数" clearable>
+              <el-input v-model="form.m3u_catchup_template" :placeholder="$t('publish.catchup_placeholder')" clearable>
                 <template #append>
                   <el-dropdown trigger="click" @command="(cmd) => form.m3u_catchup_template = cmd">
                     <span class="el-dropdown-link" style="cursor: pointer; display: flex; align-items: center; color: var(--el-color-primary)">
-                      选择模板<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                      {{ $t('publish.select_template') }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
                     </span>
                     <template #dropdown>
                       <el-dropdown-menu>
-                        <el-dropdown-item command="playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}">通用 IPTV (yyyyMMddHHmmss)</el-dropdown-item>
-                        <el-dropdown-item command="playseek={utc:YmdHMS}-{utcend:YmdHMS}">通用 TiviMate (YmdHMS)</el-dropdown-item>
+                        <el-dropdown-item command="playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}">{{ $t('publish.template_iptv') }}</el-dropdown-item>
+                        <el-dropdown-item command="playseek={utc:YmdHMS}-{utcend:YmdHMS}">{{ $t('publish.template_tivimate') }}</el-dropdown-item>
                       </el-dropdown-menu>
                     </template>
                   </el-dropdown>
@@ -178,40 +176,40 @@
           </el-form-item>
         </template>
         <template v-if="form.type === 'epg'">
-          <el-form-item label="保留天数">
-            <el-input-number v-model="form.epg_days" :min="0" :max="7" placeholder="空表示全部" controls-position="right" />
-            <span style="margin-left: 10px; color: #909399; font-size: 12px;">(为0或空则不限制天数)</span>
+          <el-form-item :label="$t('publish.epg_days')">
+            <el-input-number v-model="form.epg_days" :min="0" :max="7" placeholder="" controls-position="right" />
+            <span style="margin-left: 10px; color: #909399; font-size: 12px;">{{ $t('publish.epg_days_help') }}</span>
           </el-form-item>
-          <el-form-item label="Gzip压缩" v-if="form.format === 'xmltv'">
+          <el-form-item :label="$t('publish.gzip')" v-if="form.format === 'xmltv'">
             <el-switch v-model="form.gzip_enabled" />
           </el-form-item>
         </template>
-        <el-form-item label="状态" v-if="isEdit">
+        <el-form-item :label="$t('common.status')" v-if="isEdit">
           <el-switch v-model="form.status" />
         </el-form-item>
       </el-form>
       <template #footer>
         <div style="display: flex; justify-content: space-between; width: 100%">
           <!-- 新增的预览按钮 -->
-          <el-button type="success" plain @click="handlePreview" :icon="View">预览效果</el-button>
+          <el-button type="success" plain @click="handlePreview" :icon="View">{{ $t('publish.preview') }}</el-button>
           <div>
-            <el-button @click="dialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+            <el-button @click="dialogVisible = false">{{ $t('common.cancel') }}</el-button>
+            <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
           </div>
         </div>
       </template>
     </el-dialog>
     <!-- Preview Dialog (预览弹窗) -->
-    <el-dialog v-model="previewVisible" title="聚合预览" width="900px" append-to-body>
+    <el-dialog v-model="previewVisible" :title="$t('publish.preview_title')" width="900px" append-to-body>
       <el-table :data="previewData" v-loading="previewLoading" height="500px" border stripe size="small">
         <template v-if="form.type === 'live'">
-          <el-table-column prop="TVGId" label="频道ID" width="100" show-overflow-tooltip />
-          <el-table-column prop="Name" label="原始名称" width="120" show-overflow-tooltip />
-          <el-table-column prop="Alias" label="频道别名" width="120">
+          <el-table-column prop="TVGId" :label="$t('publish.col_channel_id')" width="140" show-overflow-tooltip />
+          <el-table-column prop="Name" :label="$t('publish.col_original_name')" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="Alias" :label="$t('publish.col_alias')" min-width="140">
             <template #default="{ row }"><span style="color: #409eff; font-weight: bold">{{ row.Alias || '-' }}</span></template>
           </el-table-column>
-          <el-table-column prop="Group" label="频道分组" width="100" />
-          <el-table-column prop="Logo" label="台标" width="60" align="center">
+          <el-table-column prop="Group" :label="$t('publish.col_group')" min-width="120" />
+          <el-table-column prop="Logo" :label="$t('publish.col_logo')" width="80" align="center">
             <template #default="{ row }">
               <el-image 
                 v-if="row.Logo" 
@@ -226,16 +224,16 @@
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="URL" label="直播地址" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="URL" :label="$t('publish.col_live_url')" min-width="180" show-overflow-tooltip />
         </template>
 
         <template v-else>
-          <el-table-column prop="channel_id" label="频道ID" min-width="150" show-overflow-tooltip />
-          <el-table-column prop="original_name" label="原始名称" width="150" show-overflow-tooltip />
-          <el-table-column prop="alias" label="频道别名" width="150">
+          <el-table-column prop="channel_id" :label="$t('publish.col_channel_id')" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="original_name" :label="$t('publish.col_original_name')" min-width="150" show-overflow-tooltip />
+          <el-table-column prop="alias" :label="$t('publish.col_alias')" min-width="150">
             <template #default="{ row }"><span style="color: #409eff; font-weight: bold">{{ row.alias || '-' }}</span></template>
           </el-table-column>
-          <el-table-column prop="program_count" label="节目数" width="100" align="center">
+          <el-table-column prop="program_count" :label="$t('publish.col_program_count')" width="130" align="center">
             <template #default="{ row }"><el-tag size="small">{{ row.program_count }}</el-tag></template>
           </el-table-column>
         </template>
@@ -245,10 +243,14 @@
 </template>
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete, View } from '@element-plus/icons-vue'
 import api from '../api'
-const typeNameMap = { alias: '频道别名', filter: '频道过滤', group: '频道分组' }
+
+const { t } = useI18n()
+
+const typeNameMap = computed(() => ({ alias: t('rules.type_alias'), filter: t('rules.type_filter'), group: t('rules.type_group') }))
 const interfaces = ref([])
 const availableSources = ref([])
 const availableRules = ref([])
@@ -268,12 +270,12 @@ const defaultForm = () => ({
   epg_days: 7, gzip_enabled: false, tvg_id_mode: 'channel_id', filter_invalid_source_ids_arr: []
 })
 const form = reactive(defaultForm())
-const formRules = {
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  path: [{ required: true, message: '请输入路径', trigger: 'blur' }],
-  format: [{ required: true, message: '请选择格式', trigger: 'change' }],
-  source_ids_arr: [{ required: true, message: '请至少选择一个数据源', trigger: 'change', type: 'array', min: 1 }],
-}
+const formRules = computed(() => ({
+  name: [{ required: true, message: t('publish.name_required'), trigger: 'blur' }],
+  path: [{ required: true, message: t('publish.path_required'), trigger: 'blur' }],
+  format: [{ required: true, message: t('publish.format_required'), trigger: 'change' }],
+  source_ids_arr: [{ required: true, message: t('publish.source_required'), trigger: 'change', type: 'array', min: 1 }],
+}))
 // 动态计算下拉框内能选择的合法规则：EPG不支持选择"分组"
 const filteredRules = computed(() => {
   if (form.type === 'epg') {
@@ -326,7 +328,7 @@ function onSourceChange(newIds) {
 }
 function getSourceName(srcId) {
   const src = availableSources.value.find(s => s.id === srcId)
-  return src ? src.name : `数据源 #${srcId}`
+  return src ? src.name : t('publish.source_fallback', { id: srcId })
 }
 function toggleFilterInvalid(srcId, val) {
   if (val) {
@@ -366,7 +368,7 @@ function showEdit(row) {
 }
 async function handlePreview() {
   if (form.source_ids_arr.length === 0) {
-    ElMessage.warning('请先选择至少一个数据源')
+    ElMessage.warning(t('publish.select_source_first'))
     return
   }
 
@@ -386,7 +388,7 @@ async function handlePreview() {
     })
     previewData.value = data || []
   } catch (e) {
-    ElMessage.error('预览失败')
+    ElMessage.error(t('publish.preview_failed'))
   } finally {
     previewLoading.value = false
   }
@@ -409,10 +411,10 @@ async function handleSubmit() {
     if (isEdit.value) {
       body.status = form.status
       await api.put(`/publish/${editId.value}`, body)
-      ElMessage.success('更新成功')
+      ElMessage.success(t('publish.update_success'))
     } else {
       await api.post('/publish', body)
-      ElMessage.success('创建成功')
+      ElMessage.success(t('publish.create_success'))
     }
     dialogVisible.value = false
     await loadInterfaces()
@@ -420,9 +422,9 @@ async function handleSubmit() {
   finally { submitting.value = false }
 }
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确定删除发布接口 "${row.name}"？`, '确认删除', { type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消' })
+  await ElMessageBox.confirm(t('publish.delete_confirm', { name: row.name }), t('common.confirm_delete'), { type: 'warning', confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel') })
   await api.delete(`/publish/${row.id}`)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('common.delete_success'))
   await loadInterfaces()
 }
 </script>

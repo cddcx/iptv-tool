@@ -11,12 +11,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+
+	"iptv-tool-v2/pkg/i18n"
 )
 
 var (
 	jwtSecret       []byte
-	ErrNoToken      = errors.New("未提供授权令牌")
-	ErrInvalidToken = errors.New("无效或已过期的令牌")
+	ErrNoToken      = errors.New("error.no_token")
+	ErrInvalidToken = errors.New("error.invalid_token")
 )
 
 // Claims represents the JWT claims
@@ -84,7 +86,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
 			slog.Warn("Unauthorized access attempt: No token", "client_ip", c.ClientIP(), "path", c.Request.URL.Path)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": ErrNoToken.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": i18n.T(i18n.Lang(c), "error.no_token")})
 			c.Abort()
 			return
 		}
@@ -93,7 +95,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 			slog.Warn("Unauthorized access attempt: Invalid auth header format", "client_ip", c.ClientIP(), "path", c.Request.URL.Path)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "授权头格式无效"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_auth_header")})
 			c.Abort()
 			return
 		}
@@ -101,7 +103,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		claims, err := ParseToken(parts[1])
 		if err != nil {
 			slog.Warn("Unauthorized access attempt: Invalid token", "error", err, "client_ip", c.ClientIP(), "path", c.Request.URL.Path)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_token")})
 			c.Abort()
 			return
 		}

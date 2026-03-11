@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -13,6 +12,7 @@ import (
 
 	"iptv-tool-v2/internal/model"
 	"iptv-tool-v2/internal/service"
+	"iptv-tool-v2/pkg/i18n"
 )
 
 // SettingsController handles system settings for detection configuration
@@ -79,7 +79,7 @@ func (sc *SettingsController) UpdateDetectSettings(c *gin.Context) {
 
 	if req.Concurrency != nil {
 		if *req.Concurrency < 1 || *req.Concurrency > 30 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "检测并发数范围为 1-30"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.concurrency_range")})
 			return
 		}
 		sc.upsertSetting("detect_concurrency", strconv.Itoa(*req.Concurrency))
@@ -87,13 +87,13 @@ func (sc *SettingsController) UpdateDetectSettings(c *gin.Context) {
 
 	if req.Timeout != nil {
 		if *req.Timeout < 1 || *req.Timeout > 30 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "检测超时范围为 1-30 秒"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.timeout_range")})
 			return
 		}
 		sc.upsertSetting("detect_timeout", strconv.Itoa(*req.Timeout))
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "检测配置已更新"})
+	c.JSON(http.StatusOK, gin.H{"message": i18n.T(i18n.Lang(c), "message.detect_config_updated")})
 }
 
 // UploadFFprobe handles ffprobe executable file upload
@@ -101,7 +101,7 @@ func (sc *SettingsController) UpdateDetectSettings(c *gin.Context) {
 func (sc *SettingsController) UploadFFprobe(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择要上传的文件"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.select_upload_file")})
 		return
 	}
 
@@ -115,7 +115,7 @@ func (sc *SettingsController) UploadFFprobe(c *gin.Context) {
 	detectDir := filepath.Join(sc.dataDir, "detect")
 	if err := os.MkdirAll(detectDir, 0755); err != nil {
 		slog.Error("Failed to create detect directory", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建目录失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(i18n.Lang(c), "error.mkdir_failed")})
 		return
 	}
 
@@ -124,7 +124,7 @@ func (sc *SettingsController) UploadFFprobe(c *gin.Context) {
 	// Save uploaded file
 	if err := c.SaveUploadedFile(file, targetPath); err != nil {
 		slog.Error("Failed to save ffprobe file", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(i18n.Lang(c), "error.save_file_failed")})
 		return
 	}
 
@@ -140,16 +140,16 @@ func (sc *SettingsController) UploadFFprobe(c *gin.Context) {
 	if err != nil || source != "uploaded" {
 		// Remove invalid file
 		os.Remove(targetPath)
-		errMsg := "未能识别到可用文件"
+		errMsg := "unrecognized file"
 		if err != nil {
 			errMsg = err.Error()
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("上传的文件不是有效的 ffprobe 可执行文件: %s", errMsg)})
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_ffprobe", errMsg)})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":         "ffprobe 上传成功",
+		"message":         i18n.T(i18n.Lang(c), "message.ffprobe_uploaded"),
 		"ffprobe_version": version,
 		"ffprobe_source":  source,
 	})

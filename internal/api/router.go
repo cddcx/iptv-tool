@@ -10,13 +10,29 @@ import (
 	"iptv-tool-v2/internal/publish"
 	"iptv-tool-v2/internal/task"
 	"iptv-tool-v2/pkg/auth"
+	"iptv-tool-v2/pkg/i18n"
 )
 
 // SetupRouter creates and configures the Gin router with all routes
 func SetupRouter(scheduler *task.Scheduler, logoDir string, dataDir string, frontendFS fs.FS) *gin.Engine {
 	r := gin.Default()
+	r.Use(i18n.Middleware())
 
 	// --- Public routes (no auth required) ---
+
+	// Locale endpoints
+	r.GET("/api/locales", func(c *gin.Context) {
+		c.JSON(http.StatusOK, i18n.SupportedLanguages())
+	})
+	r.GET("/api/locales/:lang", func(c *gin.Context) {
+		lang := c.Param("lang")
+		data, ok := i18n.GetFrontendLocale(lang)
+		if !ok {
+			c.JSON(http.StatusNotFound, gin.H{"error": "locale not found"})
+			return
+		}
+		c.Data(http.StatusOK, "application/json; charset=utf-8", data)
+	})
 
 	// System initialization
 	systemCtrl := NewSystemController()
@@ -111,7 +127,7 @@ func SetupRouter(scheduler *task.Scheduler, logoDir string, dataDir string, fron
 
 		// Don't serve frontend for API or other backend routes
 		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/sub/") || strings.HasPrefix(path, "/logo/") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "未找到该资源"})
+			c.JSON(http.StatusNotFound, gin.H{"error": i18n.T(i18n.Lang(c), "error.not_found")})
 			return
 		}
 
