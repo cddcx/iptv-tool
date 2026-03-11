@@ -81,24 +81,17 @@ func (c *Client) GetAllChannelList(ctx context.Context) ([]iptv.Channel, error) 
 		channelID := string(matches[1])
 		channelName := string(matches[2])
 		channelURLsRaw := string(matches[4])
-		timeShift := string(matches[5])
 		timeShiftLengthStr := string(matches[6])
 		catchupURL := string(matches[7]) // TimeShiftURL
 
-		// 处理回看天数
+		// 处理回看天数（不再根据 timeShift 过滤，只要有值就解析）
 		var catchupDays int
-		if timeShift == "1" && timeShiftLengthStr != "" {
+		if timeShiftLengthStr != "" {
 			// 华为接口自带的 TimeShiftLength 通常是秒。换算成天数。
 			var length int
 			if _, err := fmt.Sscanf(timeShiftLengthStr, "%d", &length); err == nil {
 				catchupDays = length / 86400
 			}
-		}
-
-		// 不支持时移的清理干净
-		if timeShift != "1" {
-			catchupURL = ""
-			catchupDays = 0
 		}
 
 		// The raw URL might contain multiple addresses (multicast and unicast) separated by '|'

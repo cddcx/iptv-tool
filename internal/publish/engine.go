@@ -336,6 +336,9 @@ func (e *Engine) extractBestURL(rawURLs, catchupURL string) string {
 
 	for _, u := range urls {
 		u = strings.TrimSpace(u)
+		if u == "" {
+			continue
+		}
 		if strings.HasPrefix(u, "igmp://") || strings.HasPrefix(u, "rtp://") {
 			if multicastURL == "" {
 				multicastURL = u
@@ -349,15 +352,19 @@ func (e *Engine) extractBestURL(rawURLs, catchupURL string) string {
 
 	// 单播优先策略 (unicast)
 	if e.iface.AddressType == "unicast" {
+		// 优先级 1: 直接使用单播地址
 		if unicastURL != "" {
 			return unicastURL
 		}
-		// 如果只有组播，但配置了单播优先，尝试使用回看/时移地址作为单播地址
-		if catchupURL != "" {
+		// 优先级 2: 仅有组播地址，但有对应的回看单播地址时，使用回看地址替代
+		if multicastURL != "" && catchupURL != "" && !e.isMulticastURL(catchupURL) {
 			return catchupURL
 		}
-		// 实在没有办法，只能退回返回组播地址
-		return multicastURL
+		// 优先级 3: 以上都不满足，使用任意现有地址
+		if multicastURL != "" {
+			return multicastURL
+		}
+		return rawURLs
 	}
 
 	// 组播优先策略 (multicast) - 默认
@@ -378,7 +385,7 @@ func (e *Engine) extractBestURL(rawURLs, catchupURL string) string {
 		return multicastURL
 	}
 
-	// 选了组播优先，但源列表里根本没组播地址，降级使用单播
+	// 无组播地址时，使用任意现有地址
 	if unicastURL != "" {
 		return unicastURL
 	}
@@ -417,8 +424,8 @@ func (e *Engine) FormatM3U(channels []AggregatedChannel) string {
 		// ====== 核心功能：处理 Catchup 时移参数 ======
 		if templateParams != "" {
 			isMulticast := e.isMulticastURL(ch.URL)
-			if ch.CatchupSrc != "" {
-				// 有专属的 TimeShiftURL（无论组播/单播），使用 default 模式
+			if ch.CatchupSrc != "" && ch.CatchupSrc != ch.URL {
+				// 有专属的 TimeShiftURL，且与直播地址不同，使用 default 模式
 				chCatchupSource := ch.CatchupSrc
 				if strings.Contains(chCatchupSource, "?") {
 					chCatchupSource += "&" + templateParams
@@ -430,7 +437,7 @@ func (e *Engine) FormatM3U(channels []AggregatedChannel) string {
 					sb.WriteString(fmt.Sprintf(` catchup-days="%d"`, ch.CatchupDays))
 				}
 			} else if !isMulticast {
-				// 单播源且无专属 TimeShiftURL，使用 append 模式直接追加参数
+				// 单播源且无专属 TimeShiftURL（或直播地址已使用回看地址），使用 append 模式直接追加参数
 				sb.WriteString(fmt.Sprintf(` catchup="append" catchup-source="?%s"`, templateParams))
 				if ch.CatchupDays > 0 {
 					sb.WriteString(fmt.Sprintf(` catchup-days="%d"`, ch.CatchupDays))
