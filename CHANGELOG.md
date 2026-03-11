@@ -1,3 +1,20 @@
+# v2.0.2 (2026-03-11)
+
+## ✨ Features
+
+- feat: Added internationalization (i18n) support. (e7f4c50)
+
+## 🐛 Bug Fixes
+
+- fix: 选择单播优先时部分频道地址没有正确显示 (refs #8) (1e21cc8)
+- fix: i18n display issues. (8f6909c)
+- fix: 关于系统中补充本项目的仓库链接。 (382f0a6)
+- fix: 优化EPG源的节目单展示。 (9baec15)
+- fix: 优化直播源频道列表展示和检测逻辑 #7 (d93490b)
+- fix: 修改IPTV直播源参数配置时，未同步更新关联的EPG源配置。 (a05719d)
+- fix: 优化查看直播源和EPG源的频道列表的排序顺序。 (3054718)
+- fix: update web favicon icon (c1cb622)
+
 # v2.0.1 (2026-03-08)
 
 ## 🐛 Bug Fixes
