@@ -68,64 +68,87 @@ func ParseXMLTV(content string) ([]Program, error) {
 	return parseXMLTVFromReader(strings.NewReader(content))
 }
 
-// ParseXMLTVFromReader parses XMLTV from an io.Reader
+// parseXMLTVFromReader parses XMLTV from an io.Reader using SAX-style streaming.
+// Instead of loading the entire XML tree into memory, it processes one <channel>
+// or <programme> element at a time via decoder.Token() + decoder.DecodeElement(),
+// significantly reducing peak memory usage for large XMLTV files.
 func parseXMLTVFromReader(r io.Reader) ([]Program, error) {
-	var tv TV
 	decoder := xml.NewDecoder(r)
-	if err := decoder.Decode(&tv); err != nil {
-		return nil, fmt.Errorf("failed to decode XMLTV: %w", err)
-	}
 
-	// Build channel ID -> display name map
-	// Prefer lang="zh" display-name, fallback to first available
+	// Build channel ID -> display name map (populated as we encounter <channel> elements)
 	channelNameMap := make(map[string]string)
-	for _, ch := range tv.Channels {
-		name := ""
-		if len(ch.DisplayName) > 0 {
-			// First try to find a zh/zh-CN/zh-TW lang variant
-			for _, dn := range ch.DisplayName {
-				lang := strings.ToLower(dn.Lang)
-				if lang == "zh" || strings.HasPrefix(lang, "zh-") || strings.HasPrefix(lang, "zh_") {
-					name = dn.Value
-					break
+	var programs []Program
+
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse XMLTV token: %w", err)
+		}
+
+		se, ok := token.(xml.StartElement)
+		if !ok {
+			continue
+		}
+
+		switch se.Name.Local {
+		case "channel":
+			// Decode only this single <channel> element
+			var ch XMLChannel
+			if err := decoder.DecodeElement(&ch, &se); err != nil {
+				continue // skip malformed channel
+			}
+			// Prefer lang="zh" display-name, fallback to first available
+			name := ""
+			if len(ch.DisplayName) > 0 {
+				for _, dn := range ch.DisplayName {
+					lang := strings.ToLower(dn.Lang)
+					if lang == "zh" || strings.HasPrefix(lang, "zh-") || strings.HasPrefix(lang, "zh_") {
+						name = dn.Value
+						break
+					}
+				}
+				if name == "" {
+					name = ch.DisplayName[0].Value
 				}
 			}
-			// Fallback to first display-name
-			if name == "" {
-				name = ch.DisplayName[0].Value
+			channelNameMap[ch.ID] = name
+
+		case "programme":
+			// Decode only this single <programme> element
+			var prog Programme
+			if err := decoder.DecodeElement(&prog, &se); err != nil {
+				continue // skip malformed programme
 			}
-		}
-		channelNameMap[ch.ID] = name
-	}
+			startTime, err := parseXMLTVTime(prog.Start)
+			if err != nil {
+				continue
+			}
+			endTime, err := parseXMLTVTime(prog.Stop)
+			if err != nil {
+				continue
+			}
 
-	var programs []Program
-	for _, prog := range tv.Programmes {
-		startTime, err := parseXMLTVTime(prog.Start)
-		if err != nil {
-			continue
-		}
-		endTime, err := parseXMLTVTime(prog.Stop)
-		if err != nil {
-			continue
-		}
+			title := ""
+			if len(prog.Title) > 0 {
+				title = prog.Title[0].Value
+			}
+			desc := ""
+			if len(prog.Desc) > 0 {
+				desc = prog.Desc[0].Value
+			}
 
-		title := ""
-		if len(prog.Title) > 0 {
-			title = prog.Title[0].Value
+			programs = append(programs, Program{
+				Channel:     prog.Channel,
+				ChannelName: channelNameMap[prog.Channel],
+				Title:       title,
+				Desc:        desc,
+				StartTime:   startTime,
+				EndTime:     endTime,
+			})
 		}
-		desc := ""
-		if len(prog.Desc) > 0 {
-			desc = prog.Desc[0].Value
-		}
-
-		programs = append(programs, Program{
-			Channel:     prog.Channel,
-			ChannelName: channelNameMap[prog.Channel],
-			Title:       title,
-			Desc:        desc,
-			StartTime:   startTime,
-			EndTime:     endTime,
-		})
 	}
 
 	return programs, nil
