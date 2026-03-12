@@ -11,7 +11,7 @@
       <el-table-column prop="description" :label="$t('common.description')" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">{{ row.description || '-' }}</template>
       </el-table-column>
-      <el-table-column prop="type" :label="$t('common.type')" width="120">
+      <el-table-column prop="type" :label="$t('common.type')" width="150">
         <template #default="{ row }">
           <el-tag :type="typeTagMap[row.type]" size="small">{{ typeNameMap[row.type] }}</el-tag>
         </template>
