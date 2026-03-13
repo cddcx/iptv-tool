@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -78,6 +79,13 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Trim whitespace from string inputs
+	req.Name = strings.TrimSpace(req.Name)
+	req.Description = strings.TrimSpace(req.Description)
+	req.Path = strings.TrimSpace(req.Path)
+	req.UDPxyURL = strings.TrimSpace(req.UDPxyURL)
+	req.M3UCatchupTemplate = strings.TrimSpace(req.M3UCatchupTemplate)
 
 	// Validate format based on type
 	if req.Type == "live" && (req.Format != model.PublishFormatM3U && req.Format != model.PublishFormatTXT) {
@@ -171,6 +179,23 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Trim whitespace from string inputs
+	if req.Name != nil {
+		*req.Name = strings.TrimSpace(*req.Name)
+	}
+	if req.Description != nil {
+		*req.Description = strings.TrimSpace(*req.Description)
+	}
+	if req.Path != nil {
+		*req.Path = strings.TrimSpace(*req.Path)
+	}
+	if req.UDPxyURL != nil {
+		*req.UDPxyURL = strings.TrimSpace(*req.UDPxyURL)
+	}
+	if req.M3UCatchupTemplate != nil {
+		*req.M3UCatchupTemplate = strings.TrimSpace(*req.M3UCatchupTemplate)
 	}
 
 	updates := make(map[string]interface{})

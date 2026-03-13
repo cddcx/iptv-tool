@@ -99,6 +99,12 @@ func (ec *EPGSourceController) Create(c *gin.Context) {
 		return
 	}
 
+	// Trim whitespace from string inputs
+	req.Name = strings.TrimSpace(req.Name)
+	req.Description = strings.TrimSpace(req.Description)
+	req.URL = strings.TrimSpace(req.URL)
+	req.CronTime = strings.TrimSpace(req.CronTime)
+
 	if req.CronTime != "" && !task.ValidateCronTime(req.CronTime) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_cron")})
 		return
@@ -216,6 +222,20 @@ func (ec *EPGSourceController) Update(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Trim whitespace from string inputs
+	if req.Name != nil {
+		*req.Name = strings.TrimSpace(*req.Name)
+	}
+	if req.Description != nil {
+		*req.Description = strings.TrimSpace(*req.Description)
+	}
+	if req.URL != nil {
+		*req.URL = strings.TrimSpace(*req.URL)
+	}
+	if req.CronTime != nil {
+		*req.CronTime = strings.TrimSpace(*req.CronTime)
 	}
 
 	updates := make(map[string]interface{})

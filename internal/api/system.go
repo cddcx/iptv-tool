@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -60,6 +61,9 @@ func (sc *SystemController) Init(c *gin.Context) {
 		return
 	}
 
+	// Trim whitespace from string inputs
+	req.Username = strings.TrimSpace(req.Username)
+
 	plainPassword, err := auth.DecryptRSA(req.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.decrypt_failed")})
@@ -114,6 +118,9 @@ func (sc *SystemController) Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Trim whitespace from string inputs
+	req.Username = strings.TrimSpace(req.Username)
 
 	// ③ 检查是否需要验证码（连续失败 >= 3 次）
 	if globalAttemptTracker.NeedCaptcha(req.Username) {
@@ -247,6 +254,9 @@ func (sc *SystemController) CrackKey(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Trim whitespace from string inputs
+	req.Authenticator = strings.TrimSpace(req.Authenticator)
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Minute)
 	defer cancel()

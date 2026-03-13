@@ -25,12 +25,14 @@ export const useAuthStore = defineStore('auth', {
       return data.initialized
     },
     async init(username, password) {
+      username = username.trim()
       const pubKey = await this.fetchPublicKey()
       const encryptedPassword = await encryptRSA(password, pubKey)
       await api.post('/init', { username, password: encryptedPassword })
       this.initialized = true
     },
     async login(username, password, captchaId, captchaCode) {
+      username = username.trim()
       const pubKey = await this.fetchPublicKey()
       const encryptedPassword = await encryptRSA(password, pubKey)
       

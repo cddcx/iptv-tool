@@ -59,6 +59,10 @@ func (rc *RuleController) Create(c *gin.Context) {
 		return
 	}
 
+	// Trim whitespace from string inputs
+	req.Name = strings.TrimSpace(req.Name)
+	req.Description = strings.TrimSpace(req.Description)
+
 	// Check rule name uniqueness
 	var existing int64
 	model.DB.Model(&model.AggregationRule{}).Where("name = ?", req.Name).Count(&existing)
@@ -108,6 +112,14 @@ func (rc *RuleController) Update(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(i18n.Lang(c), "error.invalid_params") + ": " + err.Error()})
 		return
+	}
+
+	// Trim whitespace from string inputs
+	if req.Name != nil {
+		*req.Name = strings.TrimSpace(*req.Name)
+	}
+	if req.Description != nil {
+		*req.Description = strings.TrimSpace(*req.Description)
 	}
 
 	updates := make(map[string]interface{})

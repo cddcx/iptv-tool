@@ -176,6 +176,9 @@ func (lc *LogoController) Update(c *gin.Context) {
 		return
 	}
 
+	// Trim whitespace from string inputs
+	req.Name = strings.TrimSpace(req.Name)
+
 	// Check name uniqueness (excluding self)
 	var existing int64
 	model.DB.Model(&model.ChannelLogo{}).Where("name = ? AND id != ?", req.Name, id).Count(&existing)

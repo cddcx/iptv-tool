@@ -50,13 +50,13 @@
     <el-dialog v-model="dialogVisible" :title="isEdit ? $t('publish.edit_title') : $t('publish.add_title')" width="600px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="auto">
         <el-form-item :label="$t('common.name')" prop="name">
-          <el-input v-model="form.name" />
+          <el-input v-model.trim="form.name" />
         </el-form-item>
         <el-form-item :label="$t('common.description')">
-          <el-input v-model="form.description" :placeholder="$t('publish.desc_placeholder')" />
+          <el-input v-model.trim="form.description" :placeholder="$t('publish.desc_placeholder')" />
         </el-form-item>
         <el-form-item :label="$t('publish.col_path')" prop="path">
-          <el-input v-model="form.path" placeholder="my_list">
+          <el-input v-model.trim="form.path" placeholder="my_list">
             <template #prepend>/sub/{{ form.type }}/</template>
           </el-input>
         </el-form-item>
@@ -152,12 +152,12 @@
           </el-form-item>
 
           <el-form-item :label="$t('publish.udpxy_address')" v-if="form.address_type === 'multicast' && form.multicast_type === 'udpxy'" :rules="[{ required: true, message: $t('publish.udpxy_address_required'), trigger: 'blur' }]">
-            <el-input v-model="form.udpxy_url" :placeholder="$t('publish.udpxy_placeholder')" />
+            <el-input v-model.trim="form.udpxy_url" :placeholder="$t('publish.udpxy_placeholder')" />
           </el-form-item>
 
           <el-form-item :label="$t('publish.catchup_template')" v-if="form.format === 'm3u'">
             <div style="width: 100%;">
-              <el-input v-model="form.m3u_catchup_template" :placeholder="$t('publish.catchup_placeholder')" clearable>
+              <el-input v-model.trim="form.m3u_catchup_template" :placeholder="$t('publish.catchup_placeholder')" clearable>
                 <template #append>
                   <el-dropdown trigger="click" @command="(cmd) => form.m3u_catchup_template = cmd">
                     <span class="el-dropdown-link" style="cursor: pointer; display: flex; align-items: center; color: var(--el-color-primary)">

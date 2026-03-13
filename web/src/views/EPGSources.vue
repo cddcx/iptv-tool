@@ -68,10 +68,10 @@
     <el-dialog v-model="dialogVisible" :title="isEdit ? $t('epg_sources.edit_title') : $t('epg_sources.add_title')" width="580px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="110px">
         <el-form-item :label="$t('common.name')" prop="name">
-          <el-input v-model="form.name" />
+          <el-input v-model.trim="form.name" />
         </el-form-item>
         <el-form-item :label="$t('common.description')" prop="description">
-          <el-input v-model="form.description" :placeholder="$t('common.optional_description')" />
+          <el-input v-model.trim="form.description" :placeholder="$t('common.optional_description')" />
         </el-form-item>
         <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
           <el-select v-model="form.type" style="width: 100%" @change="onTypeChange">
@@ -82,7 +82,7 @@
 
         <!-- XMLTV fields -->
         <el-form-item label="XMLTV URL" v-if="form.type === 'network_xmltv'" prop="url">
-          <el-input v-model="form.url" :placeholder="$t('epg_sources.xmltv_url_placeholder')" />
+          <el-input v-model.trim="form.url" :placeholder="$t('epg_sources.xmltv_url_placeholder')" />
         </el-form-item>
 
         <!-- IPTV fields -->

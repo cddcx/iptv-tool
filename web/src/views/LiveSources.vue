@@ -67,10 +67,10 @@
     <el-dialog v-model="dialogVisible" :title="isEdit ? $t('live_sources.edit_title') : $t('live_sources.add_title')" width="680px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="120px">
         <el-form-item :label="$t('common.name')" prop="name">
-          <el-input v-model="form.name" />
+          <el-input v-model.trim="form.name" />
         </el-form-item>
         <el-form-item :label="$t('common.description')">
-          <el-input v-model="form.description" :placeholder="$t('common.optional_description')" />
+          <el-input v-model.trim="form.description" :placeholder="$t('common.optional_description')" />
         </el-form-item>
         <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
           <el-select v-model="form.type" style="width: 100%" @change="onTypeChange">
@@ -82,7 +82,7 @@
 
         <!-- network_url fields -->
         <el-form-item :label="$t('live_sources.subscribe_url')" v-if="form.type === 'network_url'" prop="url">
-          <el-input v-model="form.url" :placeholder="$t('live_sources.subscribe_url_placeholder')" />
+          <el-input v-model.trim="form.url" :placeholder="$t('live_sources.subscribe_url_placeholder')" />
         </el-form-item>
 
         <template v-if="form.type === 'network_url'">
@@ -115,7 +115,7 @@
           </el-form-item>
 
           <el-form-item :label="$t('live_sources.server_host')" prop="iptv.serverHost">
-            <el-input v-model="form.iptv.serverHost" :placeholder="$t('live_sources.server_host_placeholder')" />
+            <el-input v-model.trim="form.iptv.serverHost" :placeholder="$t('live_sources.server_host_placeholder')" />
           </el-form-item>
 
           <el-form-item :label="$t('live_sources.provider')" prop="iptv.providerSuffix">
@@ -127,13 +127,13 @@
 
           <el-form-item :label="$t('live_sources.encrypt_key')" prop="iptv.key">
             <div style="display: flex; gap: 8px; width: 100%">
-              <el-input v-model="form.iptv.key" :placeholder="$t('live_sources.key_placeholder')" style="flex: 1" />
+              <el-input v-model.trim="form.iptv.key" :placeholder="$t('live_sources.key_placeholder')" style="flex: 1" />
               <el-button type="success" @click="showCrackDialog" :disabled="cracking">{{ $t('live_sources.crack_key') }}</el-button>
             </div>
           </el-form-item>
 
           <el-form-item :label="$t('live_sources.client_ip')" prop="iptv.ip">
-            <el-input v-model="form.iptv.ip" :placeholder="$t('live_sources.client_ip_placeholder')" />
+            <el-input v-model.trim="form.iptv.ip" :placeholder="$t('live_sources.client_ip_placeholder')" />
             <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
               {{ $t('live_sources.client_ip_help') }}
             </div>

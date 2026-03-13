@@ -42,10 +42,10 @@
     <el-dialog v-model="dialogVisible" :title="isEdit ? $t('rules.edit_title') : $t('rules.add_title')" width="700px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
         <el-form-item :label="$t('rules.col_rule_name')" prop="name">
-          <el-input v-model="form.name" :placeholder="$t('rules.rule_name_placeholder')" />
+          <el-input v-model.trim="form.name" :placeholder="$t('rules.rule_name_placeholder')" />
         </el-form-item>
         <el-form-item :label="$t('common.description')" prop="description">
-          <el-input v-model="form.description" :placeholder="$t('rules.rule_desc_placeholder')" />
+          <el-input v-model.trim="form.description" :placeholder="$t('rules.rule_desc_placeholder')" />
         </el-form-item>
         <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
           <el-radio-group v-model="form.type" @change="onTypeChange">

@@ -25,7 +25,7 @@
         </div>
         <el-form :model="form" :rules="rules" ref="formRef" size="large">
           <el-form-item prop="username">
-            <el-input v-model="form.username" :placeholder="$t('init.username_placeholder')" :prefix-icon="User" />
+            <el-input v-model.trim="form.username" :placeholder="$t('init.username_placeholder')" :prefix-icon="User" />
           </el-form-item>
           <el-form-item prop="password">
             <el-input v-model="form.password" type="password" :placeholder="$t('init.password_placeholder')" :prefix-icon="Lock" show-password />

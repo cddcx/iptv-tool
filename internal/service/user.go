@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -32,6 +33,9 @@ func (s *UserService) IsInitialized() bool {
 
 // Register creates the first admin user. Only allowed when no users exist.
 func (s *UserService) Register(username, password string) (*model.User, error) {
+	// Trim whitespace from username
+	username = strings.TrimSpace(username)
+
 	if s.IsInitialized() {
 		return nil, ErrUserExists
 	}

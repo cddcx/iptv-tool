@@ -100,6 +100,13 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 		return
 	}
 
+	// Trim whitespace from string inputs
+	req.Name = strings.TrimSpace(req.Name)
+	req.Description = strings.TrimSpace(req.Description)
+	req.URL = strings.TrimSpace(req.URL)
+	req.CronTime = strings.TrimSpace(req.CronTime)
+	req.CronDetect = strings.TrimSpace(req.CronDetect)
+
 	// Check name uniqueness
 	var existing int64
 	model.DB.Model(&model.LiveSource{}).Where("name = ?", req.Name).Count(&existing)
@@ -290,6 +297,23 @@ func (lc *LiveSourceController) Update(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Trim whitespace from string inputs
+	if req.Name != nil {
+		*req.Name = strings.TrimSpace(*req.Name)
+	}
+	if req.Description != nil {
+		*req.Description = strings.TrimSpace(*req.Description)
+	}
+	if req.URL != nil {
+		*req.URL = strings.TrimSpace(*req.URL)
+	}
+	if req.CronTime != nil {
+		*req.CronTime = strings.TrimSpace(*req.CronTime)
+	}
+	if req.CronDetect != nil {
+		*req.CronDetect = strings.TrimSpace(*req.CronDetect)
 	}
 
 	updates := make(map[string]interface{})
