@@ -285,17 +285,39 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('live_sources.col_address')" min-width="250">
+        <el-table-column :label="$t('live_sources.col_address')" min-width="200" align="center">
           <template #default="{ row }">
-            <div v-if="row.url && row.url.includes('|')">
-              <div v-for="(u, i) in row.url.split('|')" :key="i" style="margin-bottom: 2px">
-                <el-tag size="small" :type="u.startsWith('igmp://') || u.startsWith('rtp://') ? 'warning' : 'success'" style="margin-right: 4px">
-                  {{ u.startsWith('igmp://') || u.startsWith('rtp://') ? $t('live_sources.multicast') : $t('live_sources.unicast') }}
-                </el-tag>
-                <span style="font-size: 12px; word-break: break-all">{{ u }}</span>
+            <el-popover trigger="click" width="520" placement="left" :show-arrow="true">
+              <template #reference>
+                <div style="cursor: pointer; display: flex; flex-direction: column; gap: 4px; align-items: center">
+                  <el-tag size="small" type="primary">
+                    {{ getUrls(row).length }} {{ $t('live_sources.live_addr_unit') }}
+                  </el-tag>
+                  <el-tag v-if="row.catchup_url" size="small" type="warning">
+                    {{ $t('live_sources.has_catchup') }}
+                  </el-tag>
+                </div>
+              </template>
+              <div style="user-select: text">
+                <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #303133">{{ $t('live_sources.live_addresses') }}</div>
+                <div v-for="(u, i) in getUrls(row)" :key="i" style="margin-bottom: 6px; display: flex; align-items: flex-start; gap: 6px">
+                  <el-tag size="small" :type="u.startsWith('igmp://') || u.startsWith('rtp://') ? 'warning' : 'success'" style="flex-shrink: 0; margin-top: 1px">
+                    {{ u.startsWith('igmp://') || u.startsWith('rtp://') ? $t('live_sources.multicast') : $t('live_sources.unicast') }}
+                  </el-tag>
+                  <span style="font-size: 12px; word-break: break-all; color: #606266; line-height: 1.5">{{ u }}</span>
+                </div>
+                <template v-if="row.catchup_url">
+                  <el-divider style="margin: 10px 0" />
+                  <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px; color: #303133">
+                    {{ $t('live_sources.catchup_address') }}
+                    <el-tag v-if="row.catchup_days" size="small" type="info" style="margin-left: 8px">
+                      {{ $t('live_sources.catchup_days_label', { days: row.catchup_days }) }}
+                    </el-tag>
+                  </div>
+                  <span style="font-size: 12px; word-break: break-all; color: #606266; line-height: 1.5">{{ row.catchup_url }}</span>
+                </template>
               </div>
-            </div>
-            <span v-else style="font-size: 12px; word-break: break-all">{{ row.url }}</span>
+            </el-popover>
           </template>
         </el-table-column>
       </el-table>
@@ -382,6 +404,12 @@ const cracking = ref(false)
 
 const typeNameMap = computed(() => ({ iptv: 'IPTV', network_url: t('live_sources.type_network_url'), network_manual: t('live_sources.type_network_manual') }))
 const typeTagMap = { iptv: 'danger', network_url: '', network_manual: 'warning' }
+
+// Helper: split pipe-separated URLs into an array
+function getUrls(row) {
+  if (!row.url) return []
+  return row.url.split('|').filter(u => u.trim())
+}
 
 const defaultHeaders = [
   { name: 'Accept', value: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8' },
