@@ -1,3 +1,25 @@
+# v2.0.3 (2026-03-14)
+
+## ✨ Features
+
+- feat: 直播类型发布接口支持rtp2httpd的FCC快速换台功能 (b429dc8)
+- feat: 频道检测支持选择检测策略（组播或单播优先） (4734e36)
+- feat: 直播源频道列表增加展示回看地址。 (f4abb96)
+
+## 🐛 Bug Fixes
+
+- fix: 某些情况下直播类型接口中的频道直播地址展示不正确。 (526eb06)
+- fix: 对必要的输入参数添加trim处理 (a392d5e)
+- fix: 自动创建EPG源时若已存在则增加提示信息。 (5c49f53)
+- fix: 频道检测rtsp协议地址时，强制使用 TCP传输 (5343ff4)
+- fix: Changing IPTV source clears existing EPG policy. (ef16124)
+- fix: Modify front-end styles (86fc81f)
+
+## ⚡ Performance
+
+- perf: Optimize XMLTV parsing performance (ab9ce8c)
+- perf: Optimize database read and write performance (7cc6c9a)
+
 # v2.0.2 (2026-03-11)
 
 ## ✨ Features
