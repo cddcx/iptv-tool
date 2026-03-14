@@ -67,6 +67,8 @@ type CreateInterfaceRequest struct {
 	AddressType            string              `json:"address_type"`
 	MulticastType          string              `json:"multicast_type"`
 	UDPxyURL               string              `json:"udpxy_url"`
+	FCCEnabled             bool                `json:"fcc_enabled"`
+	FCCType                string              `json:"fcc_type"`
 	M3UCatchupTemplate     string              `json:"m3u_catchup_template"`
 	FilterInvalidSourceIDs string              `json:"filter_invalid_source_ids"`
 }
@@ -128,6 +130,8 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 		AddressType:            req.AddressType,
 		MulticastType:          req.MulticastType,
 		UDPxyURL:               req.UDPxyURL,
+		FCCEnabled:             req.FCCEnabled,
+		FCCType:                req.FCCType,
 		M3UCatchupTemplate:     req.M3UCatchupTemplate,
 		FilterInvalidSourceIDs: req.FilterInvalidSourceIDs,
 	}
@@ -156,6 +160,8 @@ type UpdateInterfaceRequest struct {
 	AddressType            *string              `json:"address_type"`
 	MulticastType          *string              `json:"multicast_type"`
 	UDPxyURL               *string              `json:"udpxy_url"`
+	FCCEnabled             *bool                `json:"fcc_enabled"`
+	FCCType                *string              `json:"fcc_type"`
 	M3UCatchupTemplate     *string              `json:"m3u_catchup_template"`
 	FilterInvalidSourceIDs *string              `json:"filter_invalid_source_ids"`
 }
@@ -253,6 +259,12 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 	if req.UDPxyURL != nil {
 		updates["udpxy_url"] = *req.UDPxyURL
 	}
+	if req.FCCEnabled != nil {
+		updates["fcc_enabled"] = *req.FCCEnabled
+	}
+	if req.FCCType != nil {
+		updates["fcc_type"] = *req.FCCType
+	}
 	if req.M3UCatchupTemplate != nil {
 		updates["m3u_catchup_template"] = *req.M3UCatchupTemplate
 	}
@@ -312,6 +324,8 @@ type PreviewRequest struct {
 	AddressType            string `json:"address_type"`
 	MulticastType          string `json:"multicast_type"`
 	UDPxyURL               string `json:"udpxy_url"`
+	FCCEnabled             bool   `json:"fcc_enabled"`
+	FCCType                string `json:"fcc_type"`
 	FilterInvalidSourceIDs string `json:"filter_invalid_source_ids"`
 }
 
@@ -332,6 +346,8 @@ func (pc *PublishController) PreviewInterface(c *gin.Context) {
 		AddressType:            req.AddressType,
 		MulticastType:          req.MulticastType,
 		UDPxyURL:               req.UDPxyURL,
+		FCCEnabled:             req.FCCEnabled,
+		FCCType:                req.FCCType,
 		FilterInvalidSourceIDs: req.FilterInvalidSourceIDs,
 	}
 

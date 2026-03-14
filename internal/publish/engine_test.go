@@ -12,8 +12,12 @@ func TestExtractBestURL(t *testing.T) {
 		addressType   string // "unicast" or "multicast"
 		multicastType string
 		udpxyURL      string
+		fccEnabled    bool
+		fccType       string
 		rawURLs       string
 		catchupURL    string
+		fccIP         string
+		fccPort       string
 		want          string
 	}{
 		// ===== 单播优先 =====
@@ -179,6 +183,67 @@ func TestExtractBestURL(t *testing.T) {
 			catchupURL:    "http://113.136.1.1/timeshift/ch1",
 			want:          "http://192.168.1.1:4022/rtp/239.93.1.23:5140",
 		},
+
+		// ===== FCC 相关测试 =====
+		{
+			name:          "fcc_telecom_default_protocol",
+			addressType:   "multicast",
+			multicastType: "udpxy",
+			udpxyURL:      "http://192.168.1.1:5140",
+			fccEnabled:    true,
+			fccType:       "telecom",
+			rawURLs:       "igmp://239.253.64.120:5140",
+			fccIP:         "10.255.14.152",
+			fccPort:       "15970",
+			want:          "http://192.168.1.1:5140/rtp/239.253.64.120:5140?fcc=10.255.14.152:15970",
+		},
+		{
+			name:          "fcc_huawei_protocol",
+			addressType:   "multicast",
+			multicastType: "udpxy",
+			udpxyURL:      "http://192.168.1.1:5140",
+			fccEnabled:    true,
+			fccType:       "huawei",
+			rawURLs:       "igmp://239.253.64.120:5140",
+			fccIP:         "10.255.14.152",
+			fccPort:       "8027",
+			want:          "http://192.168.1.1:5140/rtp/239.253.64.120:5140?fcc=10.255.14.152:8027&fcc-type=huawei",
+		},
+		{
+			name:          "fcc_enabled_no_channel_fcc_data",
+			addressType:   "multicast",
+			multicastType: "udpxy",
+			udpxyURL:      "http://192.168.1.1:5140",
+			fccEnabled:    true,
+			fccType:       "telecom",
+			rawURLs:       "igmp://239.93.42.42:5140",
+			fccIP:         "",
+			fccPort:       "",
+			want:          "http://192.168.1.1:5140/rtp/239.93.42.42:5140",
+		},
+		{
+			name:          "fcc_disabled_with_channel_fcc_data",
+			addressType:   "multicast",
+			multicastType: "udpxy",
+			udpxyURL:      "http://192.168.1.1:5140",
+			fccEnabled:    false,
+			rawURLs:       "igmp://239.253.64.120:5140",
+			fccIP:         "10.255.14.152",
+			fccPort:       "8027",
+			want:          "http://192.168.1.1:5140/rtp/239.253.64.120:5140",
+		},
+		{
+			name:          "fcc_unicast_fallback_to_multicast_with_fcc",
+			addressType:   "unicast",
+			multicastType: "udpxy",
+			udpxyURL:      "http://192.168.1.1:5140",
+			fccEnabled:    true,
+			fccType:       "telecom",
+			rawURLs:       "igmp://239.253.64.120:5140",
+			fccIP:         "10.7.10.172",
+			fccPort:       "8027",
+			want:          "http://192.168.1.1:5140/rtp/239.253.64.120:5140?fcc=10.7.10.172:8027",
+		},
 	}
 
 	for _, tt := range tests {
@@ -188,9 +253,11 @@ func TestExtractBestURL(t *testing.T) {
 					AddressType:   tt.addressType,
 					MulticastType: tt.multicastType,
 					UDPxyURL:      tt.udpxyURL,
+					FCCEnabled:    tt.fccEnabled,
+					FCCType:       tt.fccType,
 				},
 			}
-			got := e.extractBestURL(tt.rawURLs, tt.catchupURL)
+			got := e.extractBestURL(tt.rawURLs, tt.catchupURL, tt.fccIP, tt.fccPort)
 			if got != tt.want {
 				t.Errorf("extractBestURL(%q, %q) = %q, want %q", tt.rawURLs, tt.catchupURL, got, tt.want)
 			}

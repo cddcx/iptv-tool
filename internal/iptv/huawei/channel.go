@@ -64,9 +64,9 @@ func (c *Client) GetAllChannelList(ctx context.Context) ([]iptv.Channel, error) 
 		return nil, err
 	}
 
-	// Regex to extract channel information
-	// ChannelID="xxx",ChannelName="xxx",UserChannelID="xxx",ChannelURL="xxx",TimeShift="xxx",TimeShiftLength="xxx",TimeShiftURL="xxx"
-	chRegex := regexp.MustCompile(`ChannelID="(.+?)",ChannelName="(.+?)",UserChannelID="(.+?)",ChannelURL="(.+?)",TimeShift="(.+?)",TimeShiftLength="(\d+?)".+?,TimeShiftURL="(.+?)"`)
+	// Regex to extract channel information including FCC fields
+	// ChannelID="xxx",ChannelName="xxx",UserChannelID="xxx",ChannelURL="xxx",TimeShift="xxx",TimeShiftLength="xxx",...,TimeShiftURL="xxx",...,ChannelFCCIP="xxx",ChannelFCCPort="xxx",...
+	chRegex := regexp.MustCompile(`ChannelID="(.+?)",ChannelName="(.+?)",UserChannelID="(.+?)",ChannelURL="(.+?)",TimeShift="(.+?)",TimeShiftLength="(\d+?)".+?,TimeShiftURL="(.+?)".+?,ChannelFCCIP="(.*?)",ChannelFCCPort="(.*?)"`)
 	matchesList := chRegex.FindAllSubmatch(result, -1)
 	if matchesList == nil {
 		return nil, errors.New("failed to extract channel list from response")
@@ -74,7 +74,7 @@ func (c *Client) GetAllChannelList(ctx context.Context) ([]iptv.Channel, error) 
 
 	var channels []iptv.Channel
 	for _, matches := range matchesList {
-		if len(matches) != 8 {
+		if len(matches) != 10 {
 			continue
 		}
 
@@ -83,6 +83,8 @@ func (c *Client) GetAllChannelList(ctx context.Context) ([]iptv.Channel, error) 
 		channelURLsRaw := string(matches[4])
 		timeShiftLengthStr := string(matches[6])
 		catchupURL := string(matches[7]) // TimeShiftURL
+		fccIP := string(matches[8])      // ChannelFCCIP
+		fccPort := string(matches[9])    // ChannelFCCPort
 
 		// 处理回看天数（不再根据 timeShift 过滤，只要有值就解析）
 		var catchupDays int
@@ -104,6 +106,8 @@ func (c *Client) GetAllChannelList(ctx context.Context) ([]iptv.Channel, error) 
 			URL:         channelURLsRaw,
 			CatchupURL:  catchupURL,
 			CatchupDays: catchupDays, // 核心改动：时移天数通过提取运算赋值
+			FCCIP:       fccIP,
+			FCCPort:     fccPort,
 		})
 	}
 

@@ -25,7 +25,9 @@ type AggregatedChannel struct {
 	TVGId       string
 	TVGName     string
 	CatchupSrc  string
-	CatchupDays int // 回看天数
+	CatchupDays int    // 回看天数
+	FCCIP       string // FCC server IP
+	FCCPort     string // FCC server port
 }
 
 // DIYPProgram is a single EPG entry in the DIYP JSON format
@@ -300,13 +302,15 @@ func (e *Engine) AggregateLiveChannels(requestHost string) ([]AggregatedChannel,
 		agg := AggregatedChannel{
 			Name:        ch.Name,
 			Alias:       alias,
-			URL:         e.extractBestURL(ch.URL, ch.CatchupURL),
+			URL:         e.extractBestURL(ch.URL, ch.CatchupURL, ch.FCCIP, ch.FCCPort),
 			Group:       group,
 			Logo:        logo,
 			TVGId:       ch.TVGId,
 			TVGName:     ch.TVGName,
 			CatchupSrc:  ch.CatchupURL,
 			CatchupDays: ch.CatchupDays,
+			FCCIP:       ch.FCCIP,
+			FCCPort:     ch.FCCPort,
 		}
 
 		result = append(result, agg)
@@ -329,12 +333,21 @@ func (e *Engine) isMulticastURL(url string) bool {
 }
 
 // transformMulticastURL 根据配置的组播协议和 UDPxy 地址转换组播 URL
-func (e *Engine) transformMulticastURL(multicastURL string) string {
+// fccIP 和 fccPort 为频道级别的 FCC 服务器信息
+func (e *Engine) transformMulticastURL(multicastURL, fccIP, fccPort string) string {
 	switch e.iface.MulticastType {
 	case "udpxy":
 		if e.iface.UDPxyURL != "" && strings.HasPrefix(multicastURL, "igmp://") {
 			addr := strings.TrimPrefix(multicastURL, "igmp://")
-			return strings.TrimRight(e.iface.UDPxyURL, "/") + "/rtp/" + addr
+			result := strings.TrimRight(e.iface.UDPxyURL, "/") + "/rtp/" + addr
+			// Append FCC parameters if enabled and channel has FCC info
+			if e.iface.FCCEnabled && fccIP != "" && fccPort != "" {
+				result += "?fcc=" + fccIP + ":" + fccPort
+				if e.iface.FCCType == "huawei" {
+					result += "&fcc-type=huawei"
+				}
+			}
+			return result
 		}
 	case "rtp":
 		if strings.HasPrefix(multicastURL, "igmp://") {
@@ -346,7 +359,7 @@ func (e *Engine) transformMulticastURL(multicastURL string) string {
 	return multicastURL
 }
 
-func (e *Engine) extractBestURL(rawURLs, catchupURL string) string {
+func (e *Engine) extractBestURL(rawURLs, catchupURL, fccIP, fccPort string) string {
 	urls := strings.Split(rawURLs, "|")
 
 	var multicastURL string
@@ -380,14 +393,14 @@ func (e *Engine) extractBestURL(rawURLs, catchupURL string) string {
 		}
 		// 优先级 3: 以上都不满足，使用组播地址（根据配置转换协议）
 		if multicastURL != "" {
-			return e.transformMulticastURL(multicastURL)
+			return e.transformMulticastURL(multicastURL, fccIP, fccPort)
 		}
 		return rawURLs
 	}
 
 	// 组播优先策略 (multicast) - 默认
 	if multicastURL != "" {
-		return e.transformMulticastURL(multicastURL)
+		return e.transformMulticastURL(multicastURL, fccIP, fccPort)
 	}
 
 	// 无组播地址时，使用任意现有地址

@@ -153,6 +153,23 @@
 
           <el-form-item :label="$t('publish.udpxy_address')" v-if="form.multicast_type === 'udpxy'" :rules="[{ required: true, message: $t('publish.udpxy_address_required'), trigger: 'blur' }]">
             <el-input v-model.trim="form.udpxy_url" :placeholder="$t('publish.udpxy_placeholder')" />
+            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
+              {{ $t('publish.udpxy_help') }}
+            </div>
+          </el-form-item>
+
+          <el-form-item :label="$t('publish.fcc_enable')" v-if="form.multicast_type === 'udpxy'">
+            <el-switch v-model="form.fcc_enabled" />
+            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
+              {{ $t('publish.fcc_enable_help') }}
+            </div>
+          </el-form-item>
+
+          <el-form-item :label="$t('publish.fcc_type')" v-if="form.multicast_type === 'udpxy' && form.fcc_enabled">
+            <el-select v-model="form.fcc_type" style="width: 100%">
+              <el-option :label="$t('publish.fcc_type_telecom')" value="telecom" />
+              <el-option :label="$t('publish.fcc_type_huawei')" value="huawei" />
+            </el-select>
           </el-form-item>
 
           <el-form-item :label="$t('publish.catchup_template')" v-if="form.format === 'm3u'">
@@ -266,7 +283,8 @@ const previewLoading = ref(false)
 const previewData = ref([])
 const defaultForm = () => ({
   name: '', description: '', path: '', type: 'live', format: 'm3u', source_ids_arr: [], rule_ids_arr: [], status: true,
-  address_type: 'multicast', multicast_type: 'udpxy', udpxy_url: '', m3u_catchup_template: '',
+  address_type: 'multicast', multicast_type: 'udpxy', udpxy_url: '', fcc_enabled: false, fcc_type: 'telecom',
+  m3u_catchup_template: '',
   epg_days: 7, gzip_enabled: false, tvg_id_mode: 'channel_id', filter_invalid_source_ids_arr: []
 })
 const form = reactive(defaultForm())
@@ -360,6 +378,7 @@ function showEdit(row) {
     tvg_id_mode: row.tvg_id_mode || 'channel_id',
     address_type: row.address_type || 'multicast',
     multicast_type: row.multicast_type || '', udpxy_url: row.udpxy_url || '',
+    fcc_enabled: row.fcc_enabled || false, fcc_type: row.fcc_type || 'telecom',
     m3u_catchup_template: row.m3u_catchup_template || '',
     epg_days: row.epg_days || null, gzip_enabled: row.gzip_enabled || false,
   })
@@ -384,6 +403,8 @@ async function handlePreview() {
       address_type: form.address_type,
       multicast_type: form.multicast_type,
       udpxy_url: form.udpxy_url,
+      fcc_enabled: form.fcc_enabled,
+      fcc_type: form.fcc_type,
       filter_invalid_source_ids: form.filter_invalid_source_ids_arr.join(',')
     })
     previewData.value = data || []
@@ -405,7 +426,8 @@ async function handleSubmit() {
       tvg_id_mode: form.tvg_id_mode,
       address_type: form.address_type,
       multicast_type: form.multicast_type,
-      udpxy_url: form.udpxy_url, m3u_catchup_template: form.m3u_catchup_template,
+      udpxy_url: form.udpxy_url, fcc_enabled: form.fcc_enabled, fcc_type: form.fcc_type,
+      m3u_catchup_template: form.m3u_catchup_template,
       epg_days: form.epg_days || 0, gzip_enabled: form.gzip_enabled,
     }
     if (isEdit.value) {

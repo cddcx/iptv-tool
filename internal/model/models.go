@@ -108,6 +108,8 @@ type PublishInterface struct {
 	AddressType            string `json:"address_type"`                                            // multicast, unicast
 	MulticastType          string `json:"multicast_type"`                                          // udpxy, rtp, igmp
 	UDPxyURL               string `gorm:"column:udpxy_url" json:"udpxy_url"`                       // e.g., http://192.168.1.1:4022
+	FCCEnabled             bool   `json:"fcc_enabled"`                                             // Enable FCC (Fast Channel Change) for rtp2httpd
+	FCCType                string `json:"fcc_type"`                                                // telecom (default) or huawei
 	M3UCatchupTemplate     string `gorm:"column:m3u_catchup_template" json:"m3u_catchup_template"` // e.g., playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}
 	FilterInvalidSourceIDs string `json:"filter_invalid_source_ids"`                               // Comma-separated source IDs that should filter timeout channels
 
@@ -159,6 +161,8 @@ type ParsedChannel struct {
 	URL             string     `json:"url"`
 	CatchupURL      string     `json:"catchup_url"`      // Original timeshift/catchup base URL
 	CatchupDays     int        `json:"catchup_days"`     // Days available for catchup
+	FCCIP           string     `json:"fcc_ip"`           // FCC server IP (from ChannelFCCIP)
+	FCCPort         string     `json:"fcc_port"`         // FCC server port (from ChannelFCCPort)
 	Latency         *int       `json:"latency"`          // Detection latency in ms: nil=not detected, -1=timeout, >0=normal latency
 	DetectedAt      *time.Time `json:"detected_at"`      // Last detection time
 	VideoCodec      *string    `json:"video_codec"`      // nil=not detected, e.g. "h264", "hevc"

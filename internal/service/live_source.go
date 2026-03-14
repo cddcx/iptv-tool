@@ -182,6 +182,8 @@ func (s *LiveSourceService) fetchIPTV(source model.LiveSource) ([]m3u.Channel, e
 			TVGName:     ch.Name,
 			CatchupSrc:  ch.CatchupURL,
 			CatchupDays: ch.CatchupDays,
+			FCCIP:       ch.FCCIP,
+			FCCPort:     ch.FCCPort,
 		})
 	}
 
@@ -279,6 +281,8 @@ func (s *LiveSourceService) saveParsedChannels(sourceID uint, channels []m3u.Cha
 			URL:         ch.URL,
 			CatchupURL:  ch.CatchupSrc,
 			CatchupDays: ch.CatchupDays,
+			FCCIP:       ch.FCCIP,
+			FCCPort:     ch.FCCPort,
 		})
 	}
 

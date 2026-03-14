@@ -17,6 +17,8 @@ type Channel struct {
 	TVGName     string            `json:"tvg_name"`
 	CatchupSrc  string            `json:"catchup_src"`
 	CatchupDays int               `json:"catchup_days"`
+	FCCIP       string            `json:"fcc_ip"`
+	FCCPort     string            `json:"fcc_port"`
 	Extra       map[string]string `json:"extra"`
 }
 

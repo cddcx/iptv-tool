@@ -53,6 +53,8 @@ type Channel struct {
 	URL         string
 	CatchupURL  string
 	CatchupDays int
+	FCCIP       string // FCC server IP (from ChannelFCCIP)
+	FCCPort     string // FCC server port (from ChannelFCCPort)
 }
 
 // Program represents a single TV program in EPG
