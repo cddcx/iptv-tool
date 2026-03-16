@@ -101,7 +101,7 @@
               <span class="sponsor-sub">{{ $t('settings_about.afdian_sub') }}</span>
             </div>
           </div>
-          <el-button type="primary" class="afdian-btn" @click="openLink('https://afdian.com/a/super321')">
+          <el-button type="primary" class="afdian-btn" @click="openLink('https://ifdian.net/a/super321')">
             <el-icon style="margin-right: 4px"><Link /></el-icon>
             {{ $t('settings_about.go_sponsor') }}
           </el-button>
