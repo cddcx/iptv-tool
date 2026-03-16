@@ -22,7 +22,8 @@ type AggregatedChannel struct {
 	Alias       string
 	URL         string
 	Group       string
-	Logo        string
+	Logo        string // 台标管理匹配到的相对路径 (e.g. /logo/cctv1.png)
+	SourceLogo  string // 数据源解析时自带的原始 logo URL
 	TVGId       string
 	TVGName     string
 	CatchupSrc  string
@@ -306,6 +307,7 @@ func (e *Engine) AggregateLiveChannels() ([]AggregatedChannel, error) {
 			URL:         e.extractBestURL(ch.URL, ch.CatchupURL, ch.FCCIP, ch.FCCPort),
 			Group:       group,
 			Logo:        logo,
+			SourceLogo:  ch.Logo,
 			TVGId:       ch.TVGId,
 			TVGName:     ch.TVGName,
 			CatchupSrc:  ch.CatchupURL,
@@ -437,13 +439,15 @@ func (e *Engine) FormatM3U(channels []AggregatedChannel, requestHost string) str
 			sb.WriteString(fmt.Sprintf(`#EXTINF:-1 tvg-name="%s"`, displayName))
 		}
 
+		// ====== tvg-logo 三级回退逻辑 ======
+		// 优先级 1: 台标管理匹配的 logo（相对路径，根据客户端请求地址组装完整 URL）
+		// 优先级 2: 数据源解析时自带的原始 logo URL（直接使用原始地址）
+		// 优先级 3: 均无 logo，不生成 tvg-logo 属性
 		if ch.Logo != "" {
-			// Resolve relative logo path to full URL using client's request host
-			logoURL := ch.Logo
-			if strings.HasPrefix(logoURL, "/") {
-				logoURL = fmt.Sprintf("http://%s%s", requestHost, logoURL)
-			}
+			logoURL := fmt.Sprintf("http://%s%s", requestHost, ch.Logo)
 			sb.WriteString(fmt.Sprintf(` tvg-logo="%s"`, logoURL))
+		} else if ch.SourceLogo != "" {
+			sb.WriteString(fmt.Sprintf(` tvg-logo="%s"`, ch.SourceLogo))
 		}
 		// ====== 核心功能：处理 Catchup 时移参数 ======
 		if templateParams != "" {

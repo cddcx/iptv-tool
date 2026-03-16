@@ -229,11 +229,11 @@
           <el-table-column prop="Logo" :label="$t('publish.col_logo')" width="80" align="center">
             <template #default="{ row }">
               <el-image 
-                v-if="row.Logo" 
-                :src="row.Logo" 
+                v-if="row.Logo || row.SourceLogo" 
+                :src="row.Logo || row.SourceLogo" 
                 style="width: 24px; height: 24px; cursor: pointer" 
                 fit="contain" 
-                :preview-src-list="[row.Logo]"
+                :preview-src-list="[row.Logo || row.SourceLogo]"
                 :z-index="3000"
                 preview-teleported
                 hide-on-click-modal
