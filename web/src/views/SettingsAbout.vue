@@ -23,12 +23,16 @@
                 {{ $t('settings_about.checking_update') }}
               </span>
               <el-tag v-else-if="updateStatus === 'latest'" size="small" type="success" effect="plain" class="update-status-tag">
-                <el-icon :size="12" style="margin-right: 2px"><CircleCheckFilled /></el-icon>
-                {{ $t('settings_about.already_latest') }}
+                <span style="display: flex; align-items: center; gap: 2px">
+                  <el-icon :size="12"><CircleCheckFilled /></el-icon>
+                  <span>{{ $t('settings_about.already_latest') }}</span>
+                </span>
               </el-tag>
               <el-link v-else-if="updateStatus === 'available'" type="warning" :underline="false" class="update-available-link" @click="showUpdateDialog = true">
-                <el-icon :size="14" style="margin-right: 2px"><TopRight /></el-icon>
-                {{ $t('settings_about.new_version_available') }}: {{ latestVersion }}
+                <span style="display: flex; align-items: center; gap: 2px">
+                  <el-icon :size="14"><TopRight /></el-icon>
+                  <span>{{ $t('settings_about.new_version_available') }}: {{ latestVersion }}</span>
+                </span>
               </el-link>
 
               <el-button
