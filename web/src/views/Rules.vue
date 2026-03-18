@@ -127,8 +127,11 @@
 
         <!-- Type: Group -->
         <template v-if="form.type === 'group'">
-          <div style="margin-bottom: 8px; color: #909399; font-size: 13px;">
-            {{ $t('rules.group_help') }}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="color: #909399; font-size: 13px;">{{ $t('rules.group_help') }}</span>
+            <el-button size="small" type="success" @click="startAIGenerate" icon="MagicStick">
+              {{ $t('rules.ai_generate') }}
+            </el-button>
           </div>
           <div v-for="(group, gIdx) in groupConfig" :key="gIdx" class="rule-box" style="background: #fafafa">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
@@ -163,6 +166,49 @@
         <el-button type="primary" @click="handleSubmit" :loading="submitting">{{ $t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
+
+    <!-- AI Step 1: Source Selection Dialog -->
+    <el-dialog v-model="aiSourceDialogVisible" :title="$t('rules.ai_select_sources')" width="550px" destroy-on-close :close-on-click-modal="false">
+      <p style="color: #909399; font-size: 13px; margin-top: 0;">{{ $t('rules.ai_select_sources_desc') }}</p>
+      <div v-if="aiSourcesLoading" v-loading="true" style="height: 120px"></div>
+      <template v-else>
+        <el-empty v-if="aiSources.length === 0" :description="$t('rules.ai_no_sources')" />
+        <el-checkbox-group v-model="aiSelectedSourceIds" v-else>
+          <div v-for="src in aiSources" :key="src.id" style="margin-bottom: 8px;">
+            <el-checkbox :value="src.id">
+              {{ src.name }}
+              <el-tag size="small" type="info" style="margin-left: 6px;">{{ src.channel_count }} {{ $t('live_sources.channel_count') }}</el-tag>
+            </el-checkbox>
+          </div>
+        </el-checkbox-group>
+      </template>
+      <template #footer>
+        <el-button @click="aiSourceDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="aiLoadChannelsAndBuildPrompt" :loading="aiChannelsLoading" :disabled="aiSelectedSourceIds.length === 0">
+          {{ $t('rules.ai_next') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- AI Step 2: Prompt Display Dialog -->
+    <el-dialog v-model="aiPromptDialogVisible" :title="$t('rules.ai_prompt_ready')" width="700px" destroy-on-close :close-on-click-modal="false">
+      <el-alert :title="$t('rules.ai_prompt_instruction')" type="info" :closable="false" show-icon style="margin-bottom: 12px;" />
+      <el-tag type="success" size="small" style="margin-bottom: 8px;">{{ $t('rules.ai_channel_count', { count: aiChannelNames.length }) }}</el-tag>
+      <el-input v-model="aiPromptText" type="textarea" :rows="14" readonly style="font-family: monospace; font-size: 12px;" />
+      <template #footer>
+        <el-button @click="aiPromptDialogVisible = false; aiSourceDialogVisible = true">{{ $t('rules.ai_prev') }}</el-button>
+        <el-button type="primary" @click="aiCopyAndNext" icon="DocumentCopy">{{ $t('rules.ai_copy_prompt') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- AI Step 3: Response Input Dialog -->
+    <el-dialog v-model="aiResponseDialogVisible" :title="$t('rules.ai_paste_response')" width="700px" destroy-on-close :close-on-click-modal="false">
+      <el-input v-model="aiResponseText" type="textarea" :rows="14" :placeholder="$t('rules.ai_paste_placeholder')" style="font-family: monospace; font-size: 12px;" />
+      <template #footer>
+        <el-button @click="aiResponseDialogVisible = false; aiPromptDialogVisible = true">{{ $t('rules.ai_prev') }}</el-button>
+        <el-button type="primary" @click="aiParseResponse">{{ $t('common.confirm') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -170,8 +216,9 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit } from '@element-plus/icons-vue'
+import { Delete, Edit, MagicStick, DocumentCopy } from '@element-plus/icons-vue'
 import api from '../api'
+import { getPromptTemplate, validateGroupRulesJSON } from '../utils/promptTemplates'
 
 const { t } = useI18n()
 
@@ -195,6 +242,18 @@ const formRules = computed(() => ({
 const aliasConfig = ref([])
 const filterConfig = ref([])
 const groupConfig = ref([])
+
+// --- AI Generate states ---
+const aiSourceDialogVisible = ref(false)
+const aiPromptDialogVisible = ref(false)
+const aiResponseDialogVisible = ref(false)
+const aiSources = ref([])
+const aiSourcesLoading = ref(false)
+const aiSelectedSourceIds = ref([])
+const aiChannelsLoading = ref(false)
+const aiChannelNames = ref([])
+const aiPromptText = ref('')
+const aiResponseText = ref('')
 
 onMounted(() => loadRules())
 
@@ -309,6 +368,114 @@ async function handleDelete(row) {
   await api.delete(`/rules/${row.id}`)
   ElMessage.success(t('common.delete_success'))
   await loadRules()
+}
+
+// ===========================
+// AI Generate Workflow
+// ===========================
+
+async function startAIGenerate() {
+  // Reset AI state
+  aiSelectedSourceIds.value = []
+  aiChannelNames.value = []
+  aiPromptText.value = ''
+  aiResponseText.value = ''
+  aiSources.value = []
+
+  // Show source selection dialog and load sources
+  aiSourceDialogVisible.value = true
+  aiSourcesLoading.value = true
+  try {
+    const { data } = await api.get('/live-sources')
+    aiSources.value = (data || []).filter(s => s.channel_count > 0)
+  } catch {
+    aiSources.value = []
+  } finally {
+    aiSourcesLoading.value = false
+  }
+}
+
+async function aiLoadChannelsAndBuildPrompt() {
+  aiChannelsLoading.value = true
+  try {
+    // Fetch channels from each selected source in parallel
+    const requests = aiSelectedSourceIds.value.map(id =>
+      api.get(`/live-sources/${id}/channels`).then(res => res.data?.channels || [])
+    )
+    const results = await Promise.all(requests)
+
+    // Collect unique channel names
+    const nameSet = new Set()
+    for (const channels of results) {
+      for (const ch of channels) {
+        if (ch.name) nameSet.add(ch.name)
+      }
+    }
+
+    aiChannelNames.value = [...nameSet].sort()
+
+    if (aiChannelNames.value.length === 0) {
+      ElMessage.warning(t('rules.ai_no_channels'))
+      return
+    }
+
+    // Build prompt using template
+    const template = getPromptTemplate('group_rules')
+    aiPromptText.value = template.build(aiChannelNames.value)
+
+    // Move to prompt dialog
+    aiSourceDialogVisible.value = false
+    aiPromptDialogVisible.value = true
+
+    // Try to auto-copy to clipboard
+    try {
+      await navigator.clipboard.writeText(aiPromptText.value)
+      ElMessage.success(t('rules.ai_prompt_copied'))
+    } catch {
+      ElMessage.warning(t('rules.ai_prompt_copy_failed'))
+    }
+  } catch {
+    ElMessage.error(t('rules.ai_no_channels'))
+  } finally {
+    aiChannelsLoading.value = false
+  }
+}
+
+function aiCopyAndNext() {
+  navigator.clipboard.writeText(aiPromptText.value).then(() => {
+    ElMessage.success(t('rules.ai_prompt_copied'))
+  }).catch(() => {
+    ElMessage.warning(t('rules.ai_prompt_copy_failed'))
+  })
+  aiPromptDialogVisible.value = false
+  aiResponseDialogVisible.value = true
+}
+
+async function aiParseResponse() {
+  const text = aiResponseText.value.trim()
+  if (!text) {
+    ElMessage.warning(t('rules.ai_parse_empty'))
+    return
+  }
+
+  const result = validateGroupRulesJSON(text)
+  if (!result.valid) {
+    ElMessage.error(t('rules.ai_parse_error'))
+    return
+  }
+
+  // Directly overwrite existing group config with AI-generated rules
+  groupConfig.value = result.data.map(g => ({
+    group_name: g.group_name,
+    rules: g.rules.map(r => ({
+      target: r.target || 'name',
+      match_mode: r.match_mode || 'regex',
+      pattern: r.pattern
+    }))
+  }))
+
+  aiResponseDialogVisible.value = false
+  ElMessage.success(t('rules.ai_parse_success', { count: result.data.length }))
 }
 </script>
 
