@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -248,13 +247,10 @@ func (lc *LiveSourceController) Create(c *gin.Context) {
 	// Trigger initial fetch for Live Source
 	lc.scheduler.TriggerLiveSourceNow(source.ID)
 
-	// If an EPG source was auto-created, delay its initial fetch to prevent IPTV login collision
+	// If an EPG source was auto-created, trigger its initial fetch
+	// The IPTV mutex ensures it will wait for the live source fetch to complete
 	if createdEPGSource != nil {
-		go func(epgID uint) {
-			// Delay for 30 seconds to allow LiveSource to finish its login & fetch
-			time.Sleep(30 * time.Second)
-			lc.scheduler.TriggerEPGSourceNow(epgID)
-		}(createdEPGSource.ID)
+		lc.scheduler.TriggerEPGSourceNow(createdEPGSource.ID)
 	}
 
 	publish.InvalidateAll()
@@ -536,6 +532,9 @@ func (lc *LiveSourceController) Delete(c *gin.Context) {
 	// Remove from scheduler
 	lc.scheduler.RemoveLiveSourceTask(sourceID)
 	lc.scheduler.RemoveDetectTask(sourceID)
+
+	// Clean up per-source IPTV mutex (no-op if source was not IPTV type)
+	service.RemoveIPTVLock(sourceID)
 
 	// Delete associated parsed channels
 	model.DB.Where("source_id = ?", sourceID).Delete(&model.ParsedChannel{})

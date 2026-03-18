@@ -46,15 +46,15 @@ func (s *EPGSourceService) FetchAndUpdate(sourceID uint) error {
 	case model.EPGSourceTypeNetworkXMLTV:
 		programs, fetchErr = s.fetchNetworkXMLTV(source.URL)
 	case model.EPGSourceTypeIPTV:
-		// Wait for associated live source to finish syncing to avoid auth token conflicts
+		// Acquire per-LiveSourceID mutex to ensure mutual exclusion with the
+		// associated IPTV live source (IPTV servers reject concurrent auth)
 		if source.LiveSourceID != nil {
-			if err := s.WaitForLiveSourceSyncComplete(*source.LiveSourceID, 10*time.Minute); err != nil {
-				fetchErr = err
-			}
+			slog.Info("Acquiring IPTV lock for EPG source", "id", sourceID, "live_source_id", *source.LiveSourceID)
+			unlock := AcquireIPTVLock(*source.LiveSourceID)
+			defer unlock()
+			slog.Info("Acquired IPTV lock for EPG source", "id", sourceID, "live_source_id", *source.LiveSourceID)
 		}
-		if fetchErr == nil {
-			programs, fetchErr = s.fetchIPTVEPG(source)
-		}
+		programs, fetchErr = s.fetchIPTVEPG(source)
 	default:
 		fetchErr = fmt.Errorf("unsupported EPG source type: %s", source.Type)
 	}
@@ -182,27 +182,4 @@ func (s *EPGSourceService) saveParsedEPG(sourceID uint, programs []epgpkg.Progra
 	}
 
 	return nil
-}
-
-// WaitForLiveSourceSyncComplete polls the associated live source's is_syncing status
-// until it becomes false or maxWait duration is reached.
-func (s *EPGSourceService) WaitForLiveSourceSyncComplete(sourceID uint, maxWait time.Duration) error {
-	deadline := time.Now().Add(maxWait)
-	ticker := time.NewTicker(3 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		var lSource model.LiveSource
-		if err := model.DB.First(&lSource, sourceID).Error; err != nil {
-			// If not found, skip wait
-			return nil
-		}
-		if !lSource.IsSyncing {
-			return nil
-		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("error.wait_epg_sync_timeout")
-		}
-		<-ticker.C
-	}
 }

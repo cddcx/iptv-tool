@@ -34,6 +34,15 @@ func (s *LiveSourceService) FetchAndUpdate(sourceID uint) error {
 		return nil // Source is disabled, skip
 	}
 
+	// For IPTV sources, acquire per-source mutex to prevent concurrent access
+	// with the associated IPTV EPG source (IPTV servers reject concurrent auth)
+	if source.Type == model.LiveSourceTypeIPTV {
+		slog.Info("Acquiring IPTV lock for live source", "id", sourceID)
+		unlock := AcquireIPTVLock(sourceID)
+		defer unlock()
+		slog.Info("Acquired IPTV lock for live source", "id", sourceID)
+	}
+
 	// Mark as syncing in case this was triggered by a cron job
 	model.DB.Model(&source).Update("is_syncing", true)
 
