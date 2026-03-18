@@ -15,10 +15,10 @@ type Config struct {
 	IP             string `json:"ip"`             // Override IP if needed
 	ServerHost     string `json:"serverHost"`     // IPTV server host:port (e.g., 182.138.3.142:8082)
 
-	Password    string            `json:"password,omitempty"`          // IPTV password
-	EPGStrategy string            `json:"channelProgramAPI,omitempty"` // auto, liveplay_30, vsp, gdhdpublic, etc.
-	Key         string            `json:"key"`                         // 3DES Key (manually provided or cracked)
-	Headers     map[string]string `json:"headers"`                     // Custom headers for requests
+	Password    string            `json:"password,omitempty"`    // IPTV password
+	EPGStrategy string            `json:"epgStrategy,omitempty"` // auto, liveplay_30, vsp, gdhdpublic, etc.
+	Key         string            `json:"key"`                   // 3DES Key (manually provided or cracked)
+	Headers     map[string]string `json:"headers"`               // Custom headers for requests
 
 	AuthParams map[string]interface{} `json:"authParams"`
 }

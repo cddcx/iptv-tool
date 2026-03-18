@@ -139,12 +139,17 @@ func (s *EPGSourceService) fetchIPTVEPG(source model.EPGSource) ([]epgpkg.Progra
 		}
 	}
 
-	// If auto-detect found a working strategy, persist it back so next run skips detection
-	// config is a local variable, but the Client holds a pointer to it,
-	// so changes from autoDetectEPGStrategy are reflected here.
+	// If auto-detect found a working strategy, persist it back so next run skips detection.
+	// Use surgical map update to preserve all existing config fields (e.g. authParams, headers).
 	if config.EPGStrategy != "" && config.EPGStrategy != "auto" {
-		configJSON, _ := json.Marshal(config)
-		model.DB.Model(&source).Update("iptv_config", string(configJSON))
+		var configMap map[string]interface{}
+		if err := json.Unmarshal([]byte(source.IPTVConfig), &configMap); err == nil {
+			configMap["epgStrategy"] = config.EPGStrategy
+			if merged, err := json.Marshal(configMap); err == nil {
+				model.DB.Model(&source).Update("iptv_config", string(merged))
+				slog.Info("EPG auto-detect: persisted working strategy", "strategy", config.EPGStrategy, "epg_source_id", source.ID)
+			}
+		}
 	}
 
 	return programs, nil

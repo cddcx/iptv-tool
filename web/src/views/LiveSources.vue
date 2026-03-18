@@ -197,7 +197,7 @@
             <span style="margin-left: 8px; color: #909399; font-size: 12px">{{ $t('live_sources.auto_create_epg') }}</span>
           </el-form-item>
           <el-form-item :label="$t('live_sources.epg_strategy')" v-if="form.epg_enabled">
-            <el-select v-model="form.iptv.channelProgramAPI" style="width: 100%">
+            <el-select v-model="form.iptv.epgStrategy" style="width: 100%">
               <el-option v-for="opt in epgStrategies" :key="opt.value" :label="opt.label" :value="opt.value" />
             </el-select>
             <div style="color: #909399; font-size: 12px; margin-top: 4px">
@@ -469,7 +469,7 @@ const defaultForm = () => ({
     providerSuffix: 'CTC',
     key: '',
     ip: '',
-    channelProgramAPI: 'auto',
+    epgStrategy: 'auto',
     headersList: defaultHeaders.map(h => ({ ...h })),
     authParamsStr: '',
   },
@@ -570,7 +570,7 @@ function buildIptvConfig() {
     key: iptv.key,
     ip: ip,
     interfaceName: interfaceName,
-    channelProgramAPI: iptv.channelProgramAPI || 'auto',
+    epgStrategy: iptv.epgStrategy || 'auto',
     headers: headers,
     // Pass the entire AuthParams JSON directly to the backend
     authParams: authParams,
@@ -604,7 +604,7 @@ function parseIptvConfig(configStr) {
     providerSuffix: cfg.providerSuffix || 'CTC',
     key: cfg.key || '',
     ip: ipDisplay,
-    channelProgramAPI: cfg.channelProgramAPI || 'auto',
+    epgStrategy: cfg.epgStrategy || cfg.channelProgramAPI || 'auto',
     headersList,
     authParamsStr,
   }
