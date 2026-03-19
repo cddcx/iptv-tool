@@ -414,7 +414,11 @@
       "data_source": "Data Source",
       "select_source_placeholder": "Select enabled sources",
       "agg_rules_placeholder": "Optional, matched in selection order",
-      "live_address": "Live Address"
+      "live_address": "Live Address",
+      "ua_check": "UA Check",
+      "ua_check_help": "When enabled, only requests with matching User-Agent are allowed",
+      "ua_allowed_values": "Allowed UA",
+      "ua_allowed_placeholder": "One User-Agent per line, supports partial matching"
     },
     "settings_detect": {
       "title": "Detection Settings",

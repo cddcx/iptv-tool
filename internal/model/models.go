@@ -113,8 +113,13 @@ type PublishInterface struct {
 	M3UCatchupTemplate     string `gorm:"column:m3u_catchup_template" json:"m3u_catchup_template"` // e.g., playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}
 	FilterInvalidSourceIDs string `json:"filter_invalid_source_ids"`                               // Comma-separated source IDs that should filter timeout channels
 
-	TvgIDMode string    `gorm:"default:'channel_id'" json:"tvg_id_mode"` // channel_id or name
-	RuleIDs   string    `json:"rule_ids"`                                // Comma-separated IDs of AggregationRule
+	TvgIDMode string `gorm:"default:'channel_id'" json:"tvg_id_mode"` // channel_id or name
+	RuleIDs   string `json:"rule_ids"`                                // Comma-separated IDs of AggregationRule
+
+	// User-Agent validation
+	UACheckEnabled  bool   `json:"ua_check_enabled"`  // Enable User-Agent validation
+	UAAllowedValues string `json:"ua_allowed_values"` // Comma-separated allowed UA substrings
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

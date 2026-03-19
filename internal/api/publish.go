@@ -71,6 +71,8 @@ type CreateInterfaceRequest struct {
 	FCCType                string              `json:"fcc_type"`
 	M3UCatchupTemplate     string              `json:"m3u_catchup_template"`
 	FilterInvalidSourceIDs string              `json:"filter_invalid_source_ids"`
+	UACheckEnabled         bool                `json:"ua_check_enabled"`
+	UAAllowedValues        string              `json:"ua_allowed_values"`
 }
 
 // CreateInterface adds a new publish interface
@@ -134,6 +136,8 @@ func (pc *PublishController) CreateInterface(c *gin.Context) {
 		FCCType:                req.FCCType,
 		M3UCatchupTemplate:     req.M3UCatchupTemplate,
 		FilterInvalidSourceIDs: req.FilterInvalidSourceIDs,
+		UACheckEnabled:         req.UACheckEnabled,
+		UAAllowedValues:        req.UAAllowedValues,
 	}
 
 	if err := model.DB.Create(&iface).Error; err != nil {
@@ -165,6 +169,8 @@ type UpdateInterfaceRequest struct {
 	FCCType                *string              `json:"fcc_type"`
 	M3UCatchupTemplate     *string              `json:"m3u_catchup_template"`
 	FilterInvalidSourceIDs *string              `json:"filter_invalid_source_ids"`
+	UACheckEnabled         *bool                `json:"ua_check_enabled"`
+	UAAllowedValues        *string              `json:"ua_allowed_values"`
 }
 
 // UpdateInterface modifies a publish interface
@@ -271,6 +277,12 @@ func (pc *PublishController) UpdateInterface(c *gin.Context) {
 	}
 	if req.FilterInvalidSourceIDs != nil {
 		updates["filter_invalid_source_ids"] = *req.FilterInvalidSourceIDs
+	}
+	if req.UACheckEnabled != nil {
+		updates["ua_check_enabled"] = *req.UACheckEnabled
+	}
+	if req.UAAllowedValues != nil {
+		updates["ua_allowed_values"] = *req.UAAllowedValues
 	}
 
 	if len(updates) > 0 {

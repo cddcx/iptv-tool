@@ -201,6 +201,25 @@
             <el-switch v-model="form.gzip_enabled" />
           </el-form-item>
         </template>
+
+        <!-- UA Check -->
+        <el-form-item :label="$t('publish.ua_check')">
+          <div style="width: 100%">
+            <el-switch v-model="form.ua_check_enabled" />
+            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
+              {{ $t('publish.ua_check_help') }}
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item :label="$t('publish.ua_allowed_values')" v-if="form.ua_check_enabled">
+          <el-input
+            v-model="form.ua_allowed_values_text"
+            type="textarea"
+            :rows="3"
+            :placeholder="$t('publish.ua_allowed_placeholder')"
+          />
+        </el-form-item>
+
         <el-form-item :label="$t('common.status')" v-if="isEdit">
           <el-switch v-model="form.status" />
         </el-form-item>
@@ -285,7 +304,8 @@ const defaultForm = () => ({
   name: '', description: '', path: '', type: 'live', format: 'm3u', source_ids_arr: [], rule_ids_arr: [], status: true,
   address_type: 'multicast', multicast_type: 'udpxy', udpxy_url: '', fcc_enabled: false, fcc_type: 'telecom',
   m3u_catchup_template: '',
-  epg_days: 7, gzip_enabled: false, tvg_id_mode: 'channel_id', filter_invalid_source_ids_arr: []
+  epg_days: 7, gzip_enabled: false, tvg_id_mode: 'channel_id', filter_invalid_source_ids_arr: [],
+  ua_check_enabled: false, ua_allowed_values_text: ''
 })
 const form = reactive(defaultForm())
 const formRules = computed(() => ({
@@ -381,6 +401,8 @@ function showEdit(row) {
     fcc_enabled: row.fcc_enabled || false, fcc_type: row.fcc_type || 'telecom',
     m3u_catchup_template: row.m3u_catchup_template || '',
     epg_days: row.epg_days || null, gzip_enabled: row.gzip_enabled || false,
+    ua_check_enabled: row.ua_check_enabled || false,
+    ua_allowed_values_text: (row.ua_allowed_values || '').split(',').filter(v => v.trim()).join('\n'),
   })
   fetchSources(form.type)
   dialogVisible.value = true
@@ -429,6 +451,8 @@ async function handleSubmit() {
       udpxy_url: form.udpxy_url, fcc_enabled: form.fcc_enabled, fcc_type: form.fcc_type,
       m3u_catchup_template: form.m3u_catchup_template,
       epg_days: form.epg_days || 0, gzip_enabled: form.gzip_enabled,
+      ua_check_enabled: form.ua_check_enabled,
+      ua_allowed_values: form.ua_allowed_values_text.split('\n').map(v => v.trim()).filter(v => v).join(','),
     }
     if (isEdit.value) {
       body.status = form.status

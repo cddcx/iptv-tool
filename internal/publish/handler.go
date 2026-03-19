@@ -2,12 +2,28 @@ package publish
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"iptv-tool-v2/internal/model"
 	"iptv-tool-v2/pkg/i18n"
 )
+
+// checkUserAgent returns true if reqUA contains at least one of the comma-separated allowed values.
+// Returns false when reqUA is empty or no match is found.
+func checkUserAgent(reqUA, allowedValues string) bool {
+	if reqUA == "" {
+		return false
+	}
+	for _, v := range strings.Split(allowedValues, ",") {
+		v = strings.TrimSpace(v)
+		if v != "" && strings.Contains(reqUA, v) {
+			return true
+		}
+	}
+	return false
+}
 
 // Handler serves published subscription endpoints
 // GET /sub/live/:path
@@ -23,6 +39,14 @@ func LiveHandler(c *gin.Context) {
 	if err := model.DB.Where("path = ? AND type = ? AND status = ?", path, "live", true).First(&iface).Error; err != nil {
 		c.String(http.StatusNotFound, i18n.T(i18n.Lang(c), "publish_handler.sub_not_found"))
 		return
+	}
+
+	// UA validation
+	if iface.UACheckEnabled {
+		if !checkUserAgent(c.GetHeader("User-Agent"), iface.UAAllowedValues) {
+			c.Status(http.StatusForbidden)
+			return
+		}
 	}
 
 	engine, err := NewEngine(iface)
@@ -52,6 +76,14 @@ func EPGHandler(c *gin.Context) {
 	if err := model.DB.Where("path = ? AND type = ? AND status = ?", path, "epg", true).First(&iface).Error; err != nil {
 		c.String(http.StatusNotFound, i18n.T(i18n.Lang(c), "publish_handler.sub_not_found"))
 		return
+	}
+
+	// UA validation
+	if iface.UACheckEnabled {
+		if !checkUserAgent(c.GetHeader("User-Agent"), iface.UAAllowedValues) {
+			c.Status(http.StatusForbidden)
+			return
+		}
 	}
 
 	engine, err := NewEngine(iface)

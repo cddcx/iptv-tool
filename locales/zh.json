@@ -414,7 +414,11 @@
       "data_source": "数据源",
       "select_source_placeholder": "请选择启用的数据源",
       "agg_rules_placeholder": "可选，按选择顺序执行匹配",
-      "live_address": "直播地址"
+      "live_address": "直播地址",
+      "ua_check": "UA校验",
+      "ua_check_help": "开启后，仅允许包含指定 User-Agent 的请求访问此接口",
+      "ua_allowed_values": "允许的UA",
+      "ua_allowed_placeholder": "每行一个 User-Agent 值，支持部分匹配"
     },
     "settings_detect": {
       "title": "直播检测设置",
