@@ -98,8 +98,7 @@ func NewEngine(iface model.PublishInterface) (*Engine, error) {
 						for i := range ar {
 							if ar[i].MatchMode == model.MatchModeRegex {
 								ar[i].regex, _ = regexp.Compile(ar[i].Pattern)
-								// Replace $G1, $G2 with $1, $2 for Go regexp
-								ar[i].Replacement = strings.ReplaceAll(ar[i].Replacement, "$G", "$")
+
 							}
 						}
 						e.aliasRules = append(e.aliasRules, ar...)
