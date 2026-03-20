@@ -321,7 +321,7 @@
       "ai_prompt_ready": "Prompt 已生成",
       "ai_prompt_copied": "Prompt 已复制到剪贴板",
       "ai_prompt_copy_failed": "复制失败，请手动复制下方内容",
-      "ai_prompt_instruction": "请将上方内容粘贴到 AI 大模型（如 ChatGPT、Gemini、千问、DeepSeek 等）进行提问，然后将 AI 返回的完整 JSON 内容复制回来",
+      "ai_prompt_instruction": "请将下方内容粘贴到 AI 大模型（如 ChatGPT、Gemini、千问、DeepSeek 等）进行提问，然后将 AI 返回的完整 JSON 内容复制回来",
       "ai_paste_response": "粘贴 AI 回复",
       "ai_paste_placeholder": "请将 AI 返回的 JSON 内容粘贴到这里...",
       "ai_parse_success": "解析成功，已生成 {count} 个分组规则",

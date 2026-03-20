@@ -321,7 +321,7 @@
       "ai_prompt_ready": "Prompt Generated",
       "ai_prompt_copied": "Prompt copied to clipboard",
       "ai_prompt_copy_failed": "Copy failed, please copy manually from below",
-      "ai_prompt_instruction": "Paste the content above into an AI assistant (ChatGPT, Gemini, Qwen, DeepSeek, etc.), then copy back the complete JSON response.",
+      "ai_prompt_instruction": "Paste the content below into an AI assistant (ChatGPT, Gemini, Qwen, DeepSeek, etc.), then copy back the complete JSON response.",
       "ai_paste_response": "Paste AI Response",
       "ai_paste_placeholder": "Paste the JSON response from AI here...",
       "ai_parse_success": "Parsed successfully, generated {count} group rules",
