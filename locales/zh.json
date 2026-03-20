@@ -418,7 +418,11 @@
       "ua_check": "UA校验",
       "ua_check_help": "开启后，仅允许包含指定 User-Agent 的请求访问此接口",
       "ua_allowed_values": "允许的UA",
-      "ua_allowed_placeholder": "每行一个 User-Agent 值，支持部分匹配"
+      "ua_allowed_placeholder": "每行一个 User-Agent 值，支持部分匹配",
+      "tab_basic": "基础信息",
+      "tab_data": "数据源与规则",
+      "tab_output": "输出设置",
+      "tab_access": "访问控制"
     },
     "settings_detect": {
       "title": "直播检测设置",

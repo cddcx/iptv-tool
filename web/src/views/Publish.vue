@@ -47,182 +47,194 @@
       </el-table-column>
     </el-table>
     <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('publish.edit_title') : $t('publish.add_title')" width="600px" destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('publish.edit_title') : $t('publish.add_title')" width="640px" destroy-on-close :close-on-click-modal="false">
       <el-form :model="form" :rules="formRules" ref="formRef" label-width="auto">
-        <el-form-item :label="$t('common.name')" prop="name">
-          <el-input v-model.trim="form.name" />
-        </el-form-item>
-        <el-form-item :label="$t('common.description')">
-          <el-input v-model.trim="form.description" :placeholder="$t('publish.desc_placeholder')" />
-        </el-form-item>
-        <el-form-item :label="$t('publish.col_path')" prop="path">
-          <el-input v-model.trim="form.path" placeholder="my_list">
-            <template #prepend>/sub/{{ form.type }}/</template>
-          </el-input>
-        </el-form-item>
-        <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
-          <el-radio-group v-model="form.type" @change="onTypeChange">
-            <el-radio value="live">{{ $t('publish.type_live') }}</el-radio>
-            <el-radio value="epg">{{ $t('publish.type_epg') }}</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item :label="$t('publish.col_format')" prop="format">
-          <el-select v-model="form.format" style="width: 100%">
-            <template v-if="form.type === 'live'">
-              <el-option label="M3U" value="m3u" />
-              <el-option label="TXT (DIYP)" value="txt" />
-            </template>
-            <template v-else>
-              <el-option label="XMLTV" value="xmltv" />
-              <el-option label="DIYP JSON" value="diyp" />
-            </template>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item :label="$t('publish.data_source')" prop="source_ids_arr">
-          <el-select v-model="form.source_ids_arr" multiple :placeholder="$t('publish.select_source_placeholder')" style="width: 100%" @change="onSourceChange">
-            <el-option v-for="src in availableSources" :key="src.id" :label="src.name" :value="src.id">
-              <span style="float: left">{{ src.name }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px" v-if="src.description">{{ src.description }}</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
-
-        <!-- 已选直播数据源的过滤无效数据开关 -->
-        <el-form-item v-if="form.type === 'live' && form.source_ids_arr.length > 0" :label="$t('publish.filter_invalid')">
-          <div style="width: 100%">
-            <div style="color: #909399; font-size: 12px; margin-bottom: 8px; line-height: 1.4">
-              {{ $t('publish.filter_invalid_help') }}
-            </div>
-            <div v-for="srcId in form.source_ids_arr" :key="srcId"
-              style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; margin-bottom: 4px; background: var(--el-fill-color-light); border-radius: 4px;">
-              <span style="font-size: 13px;">{{ getSourceName(srcId) }}</span>
-              <el-switch
-                :model-value="form.filter_invalid_source_ids_arr.includes(srcId)"
-                @change="(val) => toggleFilterInvalid(srcId, val)"
-                size="small"
-              />
-            </div>
-          </div>
-        </el-form-item>
-
-        <!-- 新的聚合规则多选下拉框 -->
-        <el-form-item :label="$t('publish.agg_rules')" prop="rule_ids_arr">
-          <el-select v-model="form.rule_ids_arr" multiple :placeholder="$t('publish.agg_rules_placeholder')" style="width: 100%">
-            <el-option 
-              v-for="rule in filteredRules" 
-              :key="rule.id" 
-              :label="rule.name" 
-              :value="rule.id"
-            >
-              <span style="float: left">{{ rule.name }}</span>
-              <span style="float: right; color: #8492a6; font-size: 13px">{{ typeNameMap[rule.type] || rule.type }}</span>
-            </el-option>
-          </el-select>
-        </el-form-item>
-
-        <!-- 关联策略 (tvg-id) -->
-        <el-form-item :label="$t('publish.tvg_id_mode')" v-if="(form.type === 'epg' && form.format === 'xmltv') || (form.type === 'live' && form.format === 'm3u')">
-          <el-radio-group v-model="form.tvg_id_mode">
-            <el-radio value="channel_id">{{ $t('publish.tvg_id_channel_id') }}</el-radio>
-            <el-radio value="name">{{ $t('publish.tvg_id_name') }}</el-radio>
-          </el-radio-group>
-          <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
-            {{ $t('publish.tvg_id_help') }}
-          </div>
-        </el-form-item>
-
-        <template v-if="form.type === 'live'">
-          <el-form-item :label="$t('publish.live_address')" prop="address_type">
-            <el-select v-model="form.address_type" style="width: 100%">
-              <el-option :label="$t('publish.unicast_first')" value="unicast" />
-              <el-option :label="$t('publish.multicast_first')" value="multicast" />
-            </el-select>
-            <div style="color: #909399; font-size: 12px; margin-top: 4px; line-height: 1.4">
-              {{ $t('publish.address_type_help') }}
-            </div>
-          </el-form-item>
-
-          <el-form-item :label="$t('publish.multicast_protocol')">
-            <el-select v-model="form.multicast_type" style="width: 100%">
-              <el-option :label="$t('publish.udpxy_proxy')" value="udpxy" />
-              <el-option :label="$t('publish.igmp_direct')" value="igmp" />
-              <el-option :label="$t('publish.rtp_direct')" value="rtp" />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item :label="$t('publish.udpxy_address')" v-if="form.multicast_type === 'udpxy'" :rules="[{ required: true, message: $t('publish.udpxy_address_required'), trigger: 'blur' }]">
-            <el-input v-model.trim="form.udpxy_url" :placeholder="$t('publish.udpxy_placeholder')" />
-            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
-              {{ $t('publish.udpxy_help') }}
-            </div>
-          </el-form-item>
-
-          <el-form-item :label="$t('publish.fcc_enable')" v-if="form.multicast_type === 'udpxy'">
-            <el-switch v-model="form.fcc_enabled" />
-            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
-              {{ $t('publish.fcc_enable_help') }}
-            </div>
-          </el-form-item>
-
-          <el-form-item :label="$t('publish.fcc_type')" v-if="form.multicast_type === 'udpxy' && form.fcc_enabled">
-            <el-select v-model="form.fcc_type" style="width: 100%">
-              <el-option :label="$t('publish.fcc_type_telecom')" value="telecom" />
-              <el-option :label="$t('publish.fcc_type_huawei')" value="huawei" />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item :label="$t('publish.catchup_template')" v-if="form.format === 'm3u'">
-            <div style="width: 100%;">
-              <el-input v-model.trim="form.m3u_catchup_template" :placeholder="$t('publish.catchup_placeholder')" clearable>
-                <template #append>
-                  <el-dropdown trigger="click" @command="(cmd) => form.m3u_catchup_template = cmd">
-                    <span class="el-dropdown-link" style="cursor: pointer; display: flex; align-items: center; color: var(--el-color-primary)">
-                      {{ $t('publish.select_template') }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
-                    </span>
-                    <template #dropdown>
-                      <el-dropdown-menu>
-                        <el-dropdown-item command="playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}">{{ $t('publish.template_iptv') }}</el-dropdown-item>
-                        <el-dropdown-item command="playseek={utc:YmdHMS}-{utcend:YmdHMS}">{{ $t('publish.template_tivimate') }}</el-dropdown-item>
-                      </el-dropdown-menu>
-                    </template>
-                  </el-dropdown>
-                </template>
+        <el-tabs v-model="activeTab">
+          <!-- Tab 1: Basic Info -->
+          <el-tab-pane :label="$t('publish.tab_basic')" name="basic">
+            <el-form-item :label="$t('common.name')" prop="name">
+              <el-input v-model.trim="form.name" />
+            </el-form-item>
+            <el-form-item :label="$t('common.description')">
+              <el-input v-model.trim="form.description" :placeholder="$t('publish.desc_placeholder')" />
+            </el-form-item>
+            <el-form-item :label="$t('publish.col_path')" prop="path">
+              <el-input v-model.trim="form.path" placeholder="my_list">
+                <template #prepend>/sub/{{ form.type }}/</template>
               </el-input>
-            </div>
-          </el-form-item>
-        </template>
-        <template v-if="form.type === 'epg'">
-          <el-form-item :label="$t('publish.epg_days')">
-            <el-input-number v-model="form.epg_days" :min="0" :max="7" placeholder="" controls-position="right" />
-            <span style="margin-left: 10px; color: #909399; font-size: 12px;">{{ $t('publish.epg_days_help') }}</span>
-          </el-form-item>
-          <el-form-item :label="$t('publish.gzip')" v-if="form.format === 'xmltv'">
-            <el-switch v-model="form.gzip_enabled" />
-          </el-form-item>
-        </template>
+            </el-form-item>
+            <el-form-item :label="$t('common.type')" prop="type" v-if="!isEdit">
+              <el-radio-group v-model="form.type" @change="onTypeChange">
+                <el-radio value="live">{{ $t('publish.type_live') }}</el-radio>
+                <el-radio value="epg">{{ $t('publish.type_epg') }}</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item :label="$t('publish.col_format')" prop="format">
+              <el-select v-model="form.format" style="width: 100%">
+                <template v-if="form.type === 'live'">
+                  <el-option label="M3U" value="m3u" />
+                  <el-option label="TXT (DIYP)" value="txt" />
+                </template>
+                <template v-else>
+                  <el-option label="XMLTV" value="xmltv" />
+                  <el-option label="DIYP JSON" value="diyp" />
+                </template>
+              </el-select>
+            </el-form-item>
+          </el-tab-pane>
 
-        <!-- UA Check -->
-        <el-form-item :label="$t('publish.ua_check')">
-          <div style="width: 100%">
-            <el-switch v-model="form.ua_check_enabled" />
-            <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
-              {{ $t('publish.ua_check_help') }}
-            </div>
-          </div>
-        </el-form-item>
-        <el-form-item :label="$t('publish.ua_allowed_values')" v-if="form.ua_check_enabled">
-          <el-input
-            v-model="form.ua_allowed_values_text"
-            type="textarea"
-            :rows="3"
-            :placeholder="$t('publish.ua_allowed_placeholder')"
-          />
-        </el-form-item>
+          <!-- Tab 2: Data Sources & Rules -->
+          <el-tab-pane :label="$t('publish.tab_data')" name="data">
+            <el-form-item :label="$t('publish.data_source')" prop="source_ids_arr">
+              <el-select v-model="form.source_ids_arr" multiple :placeholder="$t('publish.select_source_placeholder')" style="width: 100%" @change="onSourceChange">
+                <el-option v-for="src in availableSources" :key="src.id" :label="src.name" :value="src.id">
+                  <span style="float: left">{{ src.name }}</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px" v-if="src.description">{{ src.description }}</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
 
-        <el-form-item :label="$t('common.status')" v-if="isEdit">
-          <el-switch v-model="form.status" />
-        </el-form-item>
+            <!-- 已选直播数据源的过滤无效数据开关 -->
+            <el-form-item v-if="form.type === 'live' && form.source_ids_arr.length > 0" :label="$t('publish.filter_invalid')">
+              <div style="width: 100%">
+                <div style="color: #909399; font-size: 12px; margin-bottom: 8px; line-height: 1.4">
+                  {{ $t('publish.filter_invalid_help') }}
+                </div>
+                <div v-for="srcId in form.source_ids_arr" :key="srcId"
+                  style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; margin-bottom: 4px; background: var(--el-fill-color-light); border-radius: 4px;">
+                  <span style="font-size: 13px;">{{ getSourceName(srcId) }}</span>
+                  <el-switch
+                    :model-value="form.filter_invalid_source_ids_arr.includes(srcId)"
+                    @change="(val) => toggleFilterInvalid(srcId, val)"
+                    size="small"
+                  />
+                </div>
+              </div>
+            </el-form-item>
+
+            <el-form-item :label="$t('publish.agg_rules')" prop="rule_ids_arr">
+              <el-select v-model="form.rule_ids_arr" multiple :placeholder="$t('publish.agg_rules_placeholder')" style="width: 100%">
+                <el-option 
+                  v-for="rule in filteredRules" 
+                  :key="rule.id" 
+                  :label="rule.name" 
+                  :value="rule.id"
+                >
+                  <span style="float: left">{{ rule.name }}</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px">{{ typeNameMap[rule.type] || rule.type }}</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <!-- 关联策略 (tvg-id) -->
+            <el-form-item :label="$t('publish.tvg_id_mode')" v-if="(form.type === 'epg' && form.format === 'xmltv') || (form.type === 'live' && form.format === 'm3u')">
+              <el-radio-group v-model="form.tvg_id_mode">
+                <el-radio value="channel_id">{{ $t('publish.tvg_id_channel_id') }}</el-radio>
+                <el-radio value="name">{{ $t('publish.tvg_id_name') }}</el-radio>
+              </el-radio-group>
+              <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
+                {{ $t('publish.tvg_id_help') }}
+              </div>
+            </el-form-item>
+          </el-tab-pane>
+
+          <!-- Tab 3: Output Settings -->
+          <el-tab-pane :label="$t('publish.tab_output')" name="output">
+            <template v-if="form.type === 'live'">
+              <el-form-item :label="$t('publish.live_address')" prop="address_type">
+                <el-select v-model="form.address_type" style="width: 100%">
+                  <el-option :label="$t('publish.unicast_first')" value="unicast" />
+                  <el-option :label="$t('publish.multicast_first')" value="multicast" />
+                </el-select>
+                <div style="color: #909399; font-size: 12px; margin-top: 4px; line-height: 1.4">
+                  {{ $t('publish.address_type_help') }}
+                </div>
+              </el-form-item>
+
+              <el-form-item :label="$t('publish.multicast_protocol')">
+                <el-select v-model="form.multicast_type" style="width: 100%">
+                  <el-option :label="$t('publish.udpxy_proxy')" value="udpxy" />
+                  <el-option :label="$t('publish.igmp_direct')" value="igmp" />
+                  <el-option :label="$t('publish.rtp_direct')" value="rtp" />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item :label="$t('publish.udpxy_address')" v-if="form.multicast_type === 'udpxy'" :rules="[{ required: true, message: $t('publish.udpxy_address_required'), trigger: 'blur' }]">
+                <el-input v-model.trim="form.udpxy_url" :placeholder="$t('publish.udpxy_placeholder')" />
+                <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
+                  {{ $t('publish.udpxy_help') }}
+                </div>
+              </el-form-item>
+
+              <el-form-item :label="$t('publish.fcc_enable')" v-if="form.multicast_type === 'udpxy'">
+                <el-switch v-model="form.fcc_enabled" />
+                <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px; width: 100%;">
+                  {{ $t('publish.fcc_enable_help') }}
+                </div>
+              </el-form-item>
+
+              <el-form-item :label="$t('publish.fcc_type')" v-if="form.multicast_type === 'udpxy' && form.fcc_enabled">
+                <el-select v-model="form.fcc_type" style="width: 100%">
+                  <el-option :label="$t('publish.fcc_type_telecom')" value="telecom" />
+                  <el-option :label="$t('publish.fcc_type_huawei')" value="huawei" />
+                </el-select>
+              </el-form-item>
+
+              <el-form-item :label="$t('publish.catchup_template')" v-if="form.format === 'm3u'">
+                <div style="width: 100%;">
+                  <el-input v-model.trim="form.m3u_catchup_template" :placeholder="$t('publish.catchup_placeholder')" clearable>
+                    <template #append>
+                      <el-dropdown trigger="click" @command="(cmd) => form.m3u_catchup_template = cmd">
+                        <span class="el-dropdown-link" style="cursor: pointer; display: flex; align-items: center; color: var(--el-color-primary)">
+                          {{ $t('publish.select_template') }}<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                        </span>
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item command="playseek=${(b)yyyyMMddHHmmss}-${(e)yyyyMMddHHmmss}">{{ $t('publish.template_iptv') }}</el-dropdown-item>
+                            <el-dropdown-item command="playseek={utc:YmdHMS}-{utcend:YmdHMS}">{{ $t('publish.template_tivimate') }}</el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </template>
+                  </el-input>
+                </div>
+              </el-form-item>
+            </template>
+            <template v-if="form.type === 'epg'">
+              <el-form-item :label="$t('publish.epg_days')">
+                <el-input-number v-model="form.epg_days" :min="0" :max="7" placeholder="" controls-position="right" />
+                <span style="margin-left: 10px; color: #909399; font-size: 12px;">{{ $t('publish.epg_days_help') }}</span>
+              </el-form-item>
+              <el-form-item :label="$t('publish.gzip')" v-if="form.format === 'xmltv'">
+                <el-switch v-model="form.gzip_enabled" />
+              </el-form-item>
+            </template>
+          </el-tab-pane>
+
+          <!-- Tab 4: Access Control -->
+          <el-tab-pane :label="$t('publish.tab_access')" name="access">
+            <el-form-item :label="$t('publish.ua_check')">
+              <div style="width: 100%">
+                <el-switch v-model="form.ua_check_enabled" />
+                <div style="color: #909399; font-size: 12px; line-height: 1.4; margin-top: 4px">
+                  {{ $t('publish.ua_check_help') }}
+                </div>
+              </div>
+            </el-form-item>
+            <el-form-item :label="$t('publish.ua_allowed_values')" v-if="form.ua_check_enabled">
+              <el-input
+                v-model="form.ua_allowed_values_text"
+                type="textarea"
+                :rows="3"
+                :placeholder="$t('publish.ua_allowed_placeholder')"
+              />
+            </el-form-item>
+
+            <el-form-item :label="$t('common.status')" v-if="isEdit">
+              <el-switch v-model="form.status" />
+            </el-form-item>
+          </el-tab-pane>
+        </el-tabs>
       </el-form>
       <template #footer>
         <div style="display: flex; justify-content: space-between; width: 100%">
@@ -281,7 +293,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Delete, View } from '@element-plus/icons-vue'
+import { Edit, Delete, View, ArrowDown } from '@element-plus/icons-vue'
 import api from '../api'
 
 const { t } = useI18n()
@@ -292,6 +304,7 @@ const availableSources = ref([])
 const availableRules = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
+const activeTab = ref('basic')
 const isEdit = ref(false)
 const editId = ref(null)
 const submitting = ref(false)
@@ -380,6 +393,7 @@ function toggleFilterInvalid(srcId, val) {
 function showCreate() {
   isEdit.value = false; editId.value = null
   Object.assign(form, defaultForm())
+  activeTab.value = 'basic'
   fetchSources(form.type)
   dialogVisible.value = true
 }
@@ -404,6 +418,7 @@ function showEdit(row) {
     ua_check_enabled: row.ua_check_enabled || false,
     ua_allowed_values_text: (row.ua_allowed_values || '').split(',').filter(v => v.trim()).join('\n'),
   })
+  activeTab.value = 'basic'
   fetchSources(form.type)
   dialogVisible.value = true
 }
@@ -436,8 +451,25 @@ async function handlePreview() {
     previewLoading.value = false
   }
 }
+// Map form field props to the tab they belong to
+const fieldTabMap = {
+  name: 'basic', path: 'basic', type: 'basic', format: 'basic',
+  source_ids_arr: 'data', rule_ids_arr: 'data',
+  address_type: 'output',
+}
 async function handleSubmit() {
-  await formRef.value.validate()
+  try {
+    await formRef.value.validate()
+  } catch (errors) {
+    // Auto-switch to the tab containing the first validation error
+    if (errors && typeof errors === 'object') {
+      const firstField = Object.keys(errors)[0]
+      if (firstField && fieldTabMap[firstField]) {
+        activeTab.value = fieldTabMap[firstField]
+      }
+    }
+    return
+  }
   submitting.value = true
   try {
     const body = {
