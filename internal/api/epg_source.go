@@ -85,6 +85,7 @@ type CreateEPGSourceRequest struct {
 	Description  string              `json:"description"`
 	Type         model.EPGSourceType `json:"type" binding:"required"`
 	URL          string              `json:"url"`
+	Headers      json.RawMessage     `json:"headers"` // For network_xmltv: custom HTTP headers
 	CronTime     string              `json:"cron_time"`
 	LiveSourceID *uint               `json:"live_source_id"` // For IPTV type: link to an existing IPTV live source
 	EPGStrategy  string              `json:"epg_strategy"`   // For IPTV type: strategy name (auto, vsp, etc.)
@@ -169,6 +170,7 @@ func (ec *EPGSourceController) Create(c *gin.Context) {
 		Description:  req.Description,
 		Type:         req.Type,
 		URL:          req.URL,
+		Headers:      string(req.Headers),
 		CronTime:     req.CronTime,
 		LiveSourceID: liveSourceID,
 		Status:       true,
@@ -199,6 +201,7 @@ type UpdateEPGSourceRequest struct {
 	Name        *string          `json:"name"`
 	Description *string          `json:"description"`
 	URL         *string          `json:"url"`
+	Headers     *json.RawMessage `json:"headers"` // For network_xmltv: custom HTTP headers
 	CronTime    *string          `json:"cron_time"`
 	Status      *bool            `json:"status"`
 	EPGStrategy *string          `json:"epg_strategy"`
@@ -255,6 +258,9 @@ func (ec *EPGSourceController) Update(c *gin.Context) {
 	}
 	if req.IPTVConfig != nil {
 		updates["iptv_config"] = string(*req.IPTVConfig)
+	}
+	if req.Headers != nil {
+		updates["headers"] = string(*req.Headers)
 	}
 	// Handle EPG strategy update by merging into existing iptv_config
 	if req.EPGStrategy != nil && source.Type == model.EPGSourceTypeIPTV {

@@ -234,7 +234,11 @@
       "only_unlinked": "仅显示尚未关联EPG源的IPTV直播源",
       "epg_strategy": "EPG策略",
       "epg_strategy_help": "选择\"自动检测\"将依次尝试所有策略，成功后自动记录",
-      "tooltip_sync": "同步"
+      "tooltip_sync": "同步",
+      "custom_headers": "自定义HTTP请求头",
+      "header_name": "Header名称",
+      "header_value": "Header值",
+      "add_header": "添加请求头"
     },
     "logos": {
       "title": "台标管理",

@@ -59,6 +59,7 @@ type EPGSource struct {
 	Description   string        `json:"description"`
 	Type          EPGSourceType `gorm:"not null" json:"type"`        // iptv, network_xmltv
 	URL           string        `json:"url"`                         // For network_xmltv
+	Headers       string        `json:"headers"`                     // JSON string for network_xmltv custom headers
 	LiveSourceID  *uint         `gorm:"index" json:"live_source_id"` // FK to LiveSource (only for IPTV type, auto-created)
 	CronTime      string        `json:"cron_time"`
 	Status        bool          `gorm:"default:true" json:"status"`

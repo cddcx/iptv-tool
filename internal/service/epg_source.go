@@ -44,7 +44,7 @@ func (s *EPGSourceService) FetchAndUpdate(sourceID uint) error {
 
 	switch source.Type {
 	case model.EPGSourceTypeNetworkXMLTV:
-		programs, fetchErr = s.fetchNetworkXMLTV(source.URL)
+		programs, fetchErr = s.fetchNetworkXMLTV(source.URL, source.Headers)
 	case model.EPGSourceTypeIPTV:
 		// Acquire per-LiveSourceID mutex to ensure mutual exclusion with the
 		// associated IPTV live source (IPTV servers reject concurrent auth)
@@ -83,9 +83,9 @@ func (s *EPGSourceService) FetchAndUpdate(sourceID uint) error {
 	return nil
 }
 
-func (s *EPGSourceService) fetchNetworkXMLTV(url string) ([]epgpkg.Program, error) {
+func (s *EPGSourceService) fetchNetworkXMLTV(url string, headersJSON string) ([]epgpkg.Program, error) {
 	// FetchAndParseXMLTV automatically handles gzip detection (via HTTP Header and magic number)
-	programs, err := epgpkg.FetchAndParseXMLTV(url)
+	programs, err := epgpkg.FetchAndParseXMLTV(url, headersJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch/parse XMLTV from %s: %w", url, err)
 	}

@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -155,7 +157,8 @@ func parseXMLTVFromReader(r io.Reader) ([]Program, error) {
 }
 
 // FetchAndParseXMLTV fetches XMLTV from a URL, automatically detecting and handling gzip compression.
-func FetchAndParseXMLTV(url string) ([]Program, error) {
+// headersJSON is an optional JSON string containing custom HTTP headers (e.g., {"User-Agent": "...", "Authorization": "..."}).
+func FetchAndParseXMLTV(url string, headersJSON string) ([]Program, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -163,6 +166,8 @@ func FetchAndParseXMLTV(url string) ([]Program, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request for %s: %w", url, err)
 	}
+
+	applyCustomHeaders(req, headersJSON)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -187,7 +192,7 @@ func FetchAndParseXMLTV(url string) ([]Program, error) {
 		gzReader, err := gzip.NewReader(resp.Body)
 		if err != nil {
 			// Maybe not actually gzip, try reading as plain XML by re-fetching
-			return retryAsPlainXMLTV(url)
+			return retryAsPlainXMLTV(url, headersJSON)
 		}
 		defer gzReader.Close()
 		reader = gzReader
@@ -218,7 +223,7 @@ func FetchAndParseXMLTV(url string) ([]Program, error) {
 }
 
 // retryAsPlainXMLTV retries fetching URL as plain XML (fallback when gzip detection is wrong)
-func retryAsPlainXMLTV(url string) ([]Program, error) {
+func retryAsPlainXMLTV(url string, headersJSON string) ([]Program, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -227,6 +232,8 @@ func retryAsPlainXMLTV(url string) ([]Program, error) {
 		return nil, err
 	}
 
+	applyCustomHeaders(req, headersJSON)
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -234,6 +241,21 @@ func retryAsPlainXMLTV(url string) ([]Program, error) {
 	defer resp.Body.Close()
 
 	return parseXMLTVFromReader(resp.Body)
+}
+
+// applyCustomHeaders parses a JSON string of headers and applies them to the request.
+func applyCustomHeaders(req *http.Request, headersJSON string) {
+	if headersJSON == "" {
+		return
+	}
+	var headers map[string]string
+	if err := json.Unmarshal([]byte(headersJSON), &headers); err == nil {
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+	} else {
+		slog.Warn("Failed to parse custom headers for XMLTV fetch", "error", err)
+	}
 }
 
 // parseXMLTVTime parses XMLTV time format: "20060102150405 +0800" or "20060102150405"

@@ -645,18 +645,18 @@ async function handleSubmit() {
   await formRef.value.validate()
   submitting.value = true
   
-  // Build headers for network_url
+  // Build headers for network_url (always send object so clearing headers works)
   let headersJson = null
-  if (form.type === 'network_url' && form.network_headers && form.network_headers.length > 0) {
+  if (form.type === 'network_url') {
     const hdrs = {}
-    for (const h of form.network_headers) {
-      if (h.name && h.name.trim()) {
-        hdrs[h.name.trim()] = h.value || ''
+    if (form.network_headers) {
+      for (const h of form.network_headers) {
+        if (h.name && h.name.trim()) {
+          hdrs[h.name.trim()] = h.value || ''
+        }
       }
     }
-    if (Object.keys(hdrs).length > 0) {
-      headersJson = hdrs
-    }
+    headersJson = hdrs
   }
   
   try {

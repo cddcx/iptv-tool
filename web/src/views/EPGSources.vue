@@ -85,6 +85,20 @@
           <el-input v-model.trim="form.url" :placeholder="$t('epg_sources.xmltv_url_placeholder')" />
         </el-form-item>
 
+        <template v-if="form.type === 'network_xmltv'">
+          <el-divider content-position="left">{{ $t('epg_sources.custom_headers') }}</el-divider>
+          <div style="margin-bottom: 16px; padding: 0 40px">
+            <div v-for="(header, idx) in form.network_headers" :key="idx" style="display: flex; gap: 8px; margin-bottom: 8px">
+              <el-input v-model="header.name" :placeholder="$t('epg_sources.header_name')" style="width: 200px" />
+              <el-input v-model="header.value" :placeholder="$t('epg_sources.header_value')" style="flex: 1" />
+              <el-button :icon="Delete" circle size="small" @click="form.network_headers.splice(idx, 1)" />
+            </div>
+            <el-button size="small" @click="form.network_headers.push({ name: '', value: '' })">
+              <el-icon><Plus /></el-icon> {{ $t('epg_sources.add_header') }}
+            </el-button>
+          </div>
+        </template>
+
         <!-- IPTV fields -->
         <template v-if="form.type === 'iptv'">
           <el-form-item :label="$t('epg_sources.linked_source')" prop="live_source_id" v-if="!isEdit">
@@ -207,7 +221,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Notebook, Refresh, Edit, Delete, SuccessFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
+import { Notebook, Refresh, Edit, Delete, SuccessFilled, CircleCloseFilled, Loading, Plus } from '@element-plus/icons-vue'
 import api from '../api'
 
 const { t, locale } = useI18n()
@@ -270,6 +284,7 @@ function handleSearchChange() {
 
 const defaultForm = () => ({
   name: '', description: '', type: 'network_xmltv', url: '', cron_time: '',
+  network_headers: [],
   live_source_id: null, epg_strategy: 'auto', status: true,
 })
 const form = reactive(defaultForm())
@@ -356,12 +371,24 @@ function showCreate() {
 function showEdit(row) {
   isEdit.value = true
   editId.value = row.id
+
+  let network_headers = []
+  if (row.type === 'network_xmltv' && row.headers) {
+    try {
+      const parsedHeaders = JSON.parse(row.headers)
+      for (const [k, v] of Object.entries(parsedHeaders)) {
+        network_headers.push({ name: k, value: v })
+      }
+    } catch {}
+  }
+
   Object.assign(form, {
     name: row.name,
     description: row.description || '',
     type: row.type,
     url: row.url || '',
     cron_time: row.cron_time || '',
+    network_headers,
     live_source_id: row.live_source_id,
     epg_strategy: getEpgStrategy(row),
     status: row.status,
@@ -372,12 +399,28 @@ function showEdit(row) {
 async function handleSubmit() {
   await formRef.value.validate()
   submitting.value = true
+
+  // Build headers for network_xmltv (always send object so clearing headers works)
+  let headersJson = null
+  if (form.type === 'network_xmltv') {
+    const hdrs = {}
+    if (form.network_headers) {
+      for (const h of form.network_headers) {
+        if (h.name && h.name.trim()) {
+          hdrs[h.name.trim()] = h.value || ''
+        }
+      }
+    }
+    headersJson = hdrs
+  }
+
   try {
     if (isEdit.value) {
       const body = {
         name: form.name,
         description: form.description,
         url: form.url,
+        headers: headersJson,
         cron_time: form.cron_time || '',
         status: form.status,
       }
@@ -392,6 +435,7 @@ async function handleSubmit() {
         description: form.description,
         type: form.type,
         url: form.url,
+        headers: headersJson,
         cron_time: form.cron_time || '',
       }
       if (form.type === 'iptv') {

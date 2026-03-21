@@ -234,7 +234,11 @@
       "only_unlinked": "Only shows IPTV live sources not yet linked to an EPG source",
       "epg_strategy": "EPG Strategy",
       "epg_strategy_help": "Select \"Auto Detect\" to try all strategies in order, auto-save on success",
-      "tooltip_sync": "Sync"
+      "tooltip_sync": "Sync",
+      "custom_headers": "Custom HTTP Headers",
+      "header_name": "Header Name",
+      "header_value": "Header Value",
+      "add_header": "Add Header"
     },
     "logos": {
       "title": "Logo Management",
