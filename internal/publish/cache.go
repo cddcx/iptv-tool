@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-// Default cache TTL: 5 minutes
-var cacheTTL = 5 * time.Minute
+// Default cache TTL: 15 minutes
+var cacheTTL = 15 * time.Minute
 
 // cacheEntry wraps cached data with a creation timestamp for TTL expiration.
 type cacheEntry[T any] struct {
