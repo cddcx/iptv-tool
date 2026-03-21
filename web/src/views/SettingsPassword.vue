@@ -44,7 +44,7 @@ const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: ''
 
 const pwdRules = computed(() => ({
   oldPassword: [{ required: true, message: t('settings_password.current_password_required'), trigger: 'blur' }],
-  newPassword: [{ required: true, message: t('settings_password.new_password_required'), trigger: 'blur' }, { min: 6, message: t('settings_password.min_length'), trigger: 'blur' }],
+  newPassword: [{ required: true, message: t('settings_password.new_password_required'), trigger: 'blur' }, { min: 6, message: t('settings_password.min_password'), trigger: 'blur' }],
   confirmPassword: [{
     required: true, message: t('settings_password.confirm_password_required'), trigger: 'blur',
   }, {
