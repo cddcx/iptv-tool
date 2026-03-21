@@ -215,7 +215,8 @@ func (s *DetectService) DetectChannels(sourceID uint, manual bool, strategy stri
 			}
 			ch.DetectedAt = &now
 
-			// Update single channel result in DB
+			// Update single channel result in DB immediately for real-time progress visibility.
+			// Per-statement fsync overhead is already mitigated by WAL mode + synchronous=NORMAL.
 			model.DB.Model(&model.ParsedChannel{}).Where("id = ?", ch.ID).Updates(map[string]interface{}{
 				"latency":          ch.Latency,
 				"detected_at":      ch.DetectedAt,

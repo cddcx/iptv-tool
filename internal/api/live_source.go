@@ -41,18 +41,31 @@ func (lc *LiveSourceController) List(c *gin.Context) {
 		return
 	}
 
+	// Single GROUP BY query to get all channel counts at once (replaces N+1 queries)
+	type sourceCount struct {
+		SourceID uint  `gorm:"column:source_id"`
+		Count    int64 `gorm:"column:count"`
+	}
+	var counts []sourceCount
+	model.DB.Model(&model.ParsedChannel{}).
+		Select("source_id, COUNT(*) as count").
+		Group("source_id").Find(&counts)
+
+	countMap := make(map[uint]int64, len(counts))
+	for _, sc := range counts {
+		countMap[sc.SourceID] = sc.Count
+	}
+
 	type LiveSourceWithCount struct {
 		model.LiveSource
 		ChannelCount int64 `json:"channel_count"`
 	}
 
-	result := make([]LiveSourceWithCount, 0)
+	result := make([]LiveSourceWithCount, 0, len(sources))
 	for _, s := range sources {
-		var channelCount int64
-		model.DB.Model(&model.ParsedChannel{}).Where("source_id = ?", s.ID).Count(&channelCount)
 		result = append(result, LiveSourceWithCount{
 			LiveSource:   s,
-			ChannelCount: channelCount,
+			ChannelCount: countMap[s.ID],
 		})
 	}
 

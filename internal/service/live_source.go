@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"iptv-tool-v2/internal/iptv"
 	"iptv-tool-v2/internal/iptv/huawei"
 	"iptv-tool-v2/internal/model"
@@ -272,11 +274,6 @@ func (s *LiveSourceService) parseManualContent(content string) ([]m3u.Channel, e
 }
 
 func (s *LiveSourceService) saveParsedChannels(sourceID uint, channels []m3u.Channel) error {
-	// Delete old channels for this source
-	if err := model.DB.Where("source_id = ?", sourceID).Delete(&model.ParsedChannel{}).Error; err != nil {
-		return fmt.Errorf("failed to clear old channels: %w", err)
-	}
-
 	// Batch insert new channels
 	var records []model.ParsedChannel
 	for _, ch := range channels {
@@ -295,11 +292,17 @@ func (s *LiveSourceService) saveParsedChannels(sourceID uint, channels []m3u.Cha
 		})
 	}
 
-	if len(records) > 0 {
-		if err := model.DB.CreateInBatches(records, 100).Error; err != nil {
-			return fmt.Errorf("failed to save parsed channels: %w", err)
+	// Wrap delete + insert in a single transaction for atomicity and reduced fsync overhead.
+	// Without this, a crash between delete and insert would leave the source with no channels.
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("source_id = ?", sourceID).Delete(&model.ParsedChannel{}).Error; err != nil {
+			return fmt.Errorf("failed to clear old channels: %w", err)
 		}
-	}
-
-	return nil
+		if len(records) > 0 {
+			if err := tx.CreateInBatches(records, 100).Error; err != nil {
+				return fmt.Errorf("failed to save parsed channels: %w", err)
+			}
+		}
+		return nil
+	})
 }

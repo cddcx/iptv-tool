@@ -38,6 +38,22 @@ func (ec *EPGSourceController) List(c *gin.Context) {
 		return
 	}
 
+	// Single GROUP BY query to get all counts at once (replaces 2N+1 queries)
+	type epgCount struct {
+		SourceID     uint  `gorm:"column:source_id"`
+		ChannelCount int64 `gorm:"column:channel_count"`
+		ProgramCount int64 `gorm:"column:program_count"`
+	}
+	var counts []epgCount
+	model.DB.Model(&model.ParsedEPG{}).
+		Select("source_id, COUNT(DISTINCT channel) as channel_count, COUNT(*) as program_count").
+		Group("source_id").Find(&counts)
+
+	countMap := make(map[uint]epgCount, len(counts))
+	for _, ec := range counts {
+		countMap[ec.SourceID] = ec
+	}
+
 	// Build response with counts
 	type EPGSourceWithCounts struct {
 		model.EPGSource
@@ -45,17 +61,13 @@ func (ec *EPGSourceController) List(c *gin.Context) {
 		ProgramCount int64 `json:"program_count"`
 	}
 
-	result := make([]EPGSourceWithCounts, 0)
+	result := make([]EPGSourceWithCounts, 0, len(sources))
 	for _, s := range sources {
-		var channelCount int64
-		var programCount int64
-		model.DB.Model(&model.ParsedEPG{}).Where("source_id = ?", s.ID).
-			Select("COUNT(DISTINCT channel)").Scan(&channelCount)
-		model.DB.Model(&model.ParsedEPG{}).Where("source_id = ?", s.ID).Count(&programCount)
+		sc := countMap[s.ID]
 		result = append(result, EPGSourceWithCounts{
 			EPGSource:    s,
-			ChannelCount: channelCount,
-			ProgramCount: programCount,
+			ChannelCount: sc.ChannelCount,
+			ProgramCount: sc.ProgramCount,
 		})
 	}
 

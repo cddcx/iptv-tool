@@ -26,6 +26,14 @@ func InitDB(dsn string) error {
 	if err != nil {
 		return err
 	}
+
+	// SQLite is a single-file database — limiting the pool avoids lock contention
+	// and reduces memory usage on resource-constrained devices (routers / soft-routers).
+	// WAL mode already allows concurrent reads at the SQLite engine level.
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetConnMaxLifetime(0) // Don't expire the single connection
+
 	slog.Info("Database opened with WAL mode, synchronous=NORMAL, busy_timeout=5000")
 
 	// Auto-migrate the schema

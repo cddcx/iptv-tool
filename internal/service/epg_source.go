@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
+
 	"iptv-tool-v2/internal/iptv"
 	"iptv-tool-v2/internal/model"
 	epgpkg "iptv-tool-v2/pkg/epg"
@@ -156,11 +158,6 @@ func (s *EPGSourceService) fetchIPTVEPG(source model.EPGSource) ([]epgpkg.Progra
 }
 
 func (s *EPGSourceService) saveParsedEPG(sourceID uint, programs []epgpkg.Program) error {
-	// Delete old EPG for this source
-	if err := model.DB.Where("source_id = ?", sourceID).Delete(&model.ParsedEPG{}).Error; err != nil {
-		return fmt.Errorf("failed to clear old EPG data: %w", err)
-	}
-
 	// Batch insert new EPG records
 	var records []model.ParsedEPG
 	for _, prog := range programs {
@@ -175,11 +172,17 @@ func (s *EPGSourceService) saveParsedEPG(sourceID uint, programs []epgpkg.Progra
 		})
 	}
 
-	if len(records) > 0 {
-		if err := model.DB.CreateInBatches(records, 200).Error; err != nil {
-			return fmt.Errorf("failed to save parsed EPG: %w", err)
+	// Wrap delete + insert in a single transaction for atomicity and reduced fsync overhead.
+	// Without this, a crash between delete and insert would leave the source with no EPG data.
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("source_id = ?", sourceID).Delete(&model.ParsedEPG{}).Error; err != nil {
+			return fmt.Errorf("failed to clear old EPG data: %w", err)
 		}
-	}
-
-	return nil
+		if len(records) > 0 {
+			if err := tx.CreateInBatches(records, 200).Error; err != nil {
+				return fmt.Errorf("failed to save parsed EPG: %w", err)
+			}
+		}
+		return nil
+	})
 }
