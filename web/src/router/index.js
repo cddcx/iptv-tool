@@ -44,6 +44,16 @@ const routes = [
         component: () => import('../views/Publish.vue'),
       },
       {
+        path: 'logs/runtime',
+        name: 'LogRuntime',
+        component: () => import('../views/LogRuntime.vue'),
+      },
+      {
+        path: 'logs/access',
+        name: 'LogAccess',
+        component: () => import('../views/LogAccess.vue'),
+      },
+      {
         path: 'settings/detect',
         name: 'SettingsDetect',
         component: () => import('../views/SettingsDetect.vue'),

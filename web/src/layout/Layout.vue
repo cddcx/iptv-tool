@@ -36,6 +36,20 @@
           <el-icon><Share /></el-icon>
           <template #title>{{ $t('nav.publish') }}</template>
         </el-menu-item>
+        <el-sub-menu index="/logs">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>{{ $t('nav.logs') }}</span>
+          </template>
+          <el-menu-item index="/logs/runtime">
+            <el-icon><Monitor /></el-icon>
+            <template #title>{{ $t('nav.logs_runtime') }}</template>
+          </el-menu-item>
+          <el-menu-item index="/logs/access">
+            <el-icon><Connection /></el-icon>
+            <template #title>{{ $t('nav.logs_access') }}</template>
+          </el-menu-item>
+        </el-sub-menu>
         <el-sub-menu index="/settings">
           <template #title>
             <el-icon><Setting /></el-icon>
@@ -116,7 +130,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { loadLocale } from '../i18n'
-import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown, Lock, InfoFilled, Stopwatch, Key } from '@element-plus/icons-vue'
+import { UserFilled, SwitchButton, VideoCamera, Monitor, Calendar, Picture, Guide, Share, Setting, Fold, Expand, ArrowDown, Lock, InfoFilled, Stopwatch, Key, Document, Connection } from '@element-plus/icons-vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()

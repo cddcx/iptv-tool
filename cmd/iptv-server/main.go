@@ -46,8 +46,12 @@ func main() {
 		logDir = filepath.Join(exeDir, logDir)
 	}
 
-	// Initialize logger early
-	if err := logger.InitLogger(logDir); err != nil {
+	// Create log buffers for the web UI log center
+	runtimeLogBuf := api.NewRuntimeLogBuffer(10000)
+	accessLogBuf := api.NewAccessLogBuffer(10000)
+
+	// Initialize logger early, with runtime log buffer tee
+	if err := logger.InitLogger(logDir, runtimeLogBuf); err != nil {
 		// Fallback to basic logging if logger init fails
 		slog.Error("Failed to initialize logger", "error", err)
 		os.Exit(1)
@@ -89,7 +93,7 @@ func main() {
 	}
 
 	// Setup and start HTTP server
-	router := api.SetupRouter(scheduler, logoDir, dataDir, frontendFS)
+	router := api.SetupRouter(scheduler, logoDir, dataDir, frontendFS, runtimeLogBuf, accessLogBuf)
 
 	slog.Info("IPTV Tool v2 starting", "address", *addr)
 	if err := router.Run(*addr); err != nil {

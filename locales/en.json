@@ -42,7 +42,10 @@
       "about": "About",
       "admin_system": "Admin Panel",
       "admin": "Admin",
-      "logout": "Logout"
+      "logout": "Logout",
+      "logs": "Log Center",
+      "logs_runtime": "Runtime Logs",
+      "logs_access": "Access Logs"
     },
     "login": {
       "admin_login": "Admin Login",
@@ -554,6 +557,29 @@
       "switch_language": "Language",
       "zh": "中文",
       "en": "English"
+    },
+    "logs": {
+      "runtime_title": "Runtime Logs",
+      "access_title": "Access Logs",
+      "pause": "Pause",
+      "resume": "Resume",
+      "clear": "Clear Logs",
+      "download": "Download",
+      "clear_confirm": "Clear all logs?",
+      "clear_success": "Logs cleared",
+      "no_logs": "No logs yet",
+      "total_lines": "{count} entries",
+      "status_live": "Live",
+      "status_paused": "Paused",
+      "col_time": "Time",
+      "col_ip": "Client IP",
+      "col_request": "Request",
+      "col_status": "Status",
+      "col_latency": "Latency",
+      "col_ua": "User-Agent",
+      "filter_all": "All Levels",
+      "filter_ip": "Filter by IP",
+      "filter_path": "Filter by URL"
     }
   },
   "backend": {

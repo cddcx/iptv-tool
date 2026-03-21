@@ -14,10 +14,11 @@ import (
 )
 
 // SetupRouter creates and configures the Gin router with all routes
-func SetupRouter(scheduler *task.Scheduler, logoDir string, dataDir string, frontendFS fs.FS) *gin.Engine {
+func SetupRouter(scheduler *task.Scheduler, logoDir string, dataDir string, frontendFS fs.FS, runtimeLogBuf *RuntimeLogBuffer, accessLogBuf *AccessLogBuffer) *gin.Engine {
 	r := gin.Default()
 	r.Use(i18n.Middleware())
 	r.Use(AccessControlMiddleware())
+	r.Use(AccessLogMiddleware(accessLogBuf))
 
 	// --- Public routes (no auth required) ---
 
@@ -124,6 +125,9 @@ func SetupRouter(scheduler *task.Scheduler, logoDir string, dataDir string, fron
 		authorized.PUT("/publish/:id", publishCtrl.UpdateInterface)
 		authorized.DELETE("/publish/:id", publishCtrl.DeleteInterface)
 		authorized.POST("/publish/preview", publishCtrl.PreviewInterface)
+
+		// Log Center
+		RegisterLogRoutes(authorized, runtimeLogBuf, accessLogBuf)
 	}
 
 	// --- Embedded frontend (SPA with hash routing) ---

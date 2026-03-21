@@ -42,7 +42,10 @@
       "about": "关于系统",
       "admin_system": "后台管理系统",
       "admin": "管理员",
-      "logout": "退出登录"
+      "logout": "退出登录",
+      "logs": "日志中心",
+      "logs_runtime": "运行日志",
+      "logs_access": "访问日志"
     },
     "login": {
       "admin_login": "管理员登录",
@@ -554,6 +557,29 @@
       "switch_language": "切换语言",
       "zh": "中文",
       "en": "English"
+    },
+    "logs": {
+      "runtime_title": "运行日志",
+      "access_title": "访问日志",
+      "pause": "暂停",
+      "resume": "恢复",
+      "clear": "清空日志",
+      "download": "下载日志",
+      "clear_confirm": "确定清空所有日志？",
+      "clear_success": "日志已清空",
+      "no_logs": "暂无日志",
+      "total_lines": "共 {count} 条",
+      "status_live": "实时刷新中",
+      "status_paused": "已暂停",
+      "col_time": "时间",
+      "col_ip": "客户端IP",
+      "col_request": "请求信息",
+      "col_status": "状态码",
+      "col_latency": "耗时",
+      "col_ua": "User-Agent",
+      "filter_all": "全部级别",
+      "filter_ip": "输入IP地址过滤",
+      "filter_path": "输入请求URL过滤"
     }
   },
   "backend": {
