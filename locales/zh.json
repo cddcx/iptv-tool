@@ -138,7 +138,6 @@
       "required_auth_params": "请输入认证参数",
       "invalid_auth_json": "认证参数JSON格式不正确",
       "delete_confirm": "确定删除直播源 \"{name}\"？关联的EPG源和频道数据也将被删除。",
-
       "trigger_detect": "已触发检测",
       "no_ffprobe": "请先在系统设置中上传 ffprobe 文件",
       "network_url_need_url": "网络链接类型需要提供URL",
@@ -205,7 +204,6 @@
       "required_live_source": "请选择关联的IPTV直播源",
       "tooltip_programs": "节目单",
       "delete_confirm": "确定删除EPG源 \"{name}\"？关联的节目数据将被清除。",
-
       "programs_title": "节目单",
       "channel_list": "频道列表",
       "col_channel_id": "频道ID",
@@ -387,7 +385,6 @@
       "col_logo": "台标",
       "col_live_url": "直播地址",
       "col_program_count": "节目数",
-
       "source_fallback": "数据源 #{id}",
       "select_source_first": "请先选择至少一个数据源",
       "preview_failed": "预览失败",
@@ -408,13 +405,11 @@
       "udpxy_address_required": "请填写代理服务器地址",
       "udpxy_placeholder": "例如: http://192.168.1.1:4022",
       "udpxy_help": "兼容 udpxy、msd_lite、rtp2httpd 等组播转单播代理服务",
-
       "fcc_enable": "启用FCC",
       "fcc_enable_help": "需要配合 rtp2httpd 代理服务使用，开启后将自动为支持FCC的频道生成带FCC参数的地址",
       "fcc_type": "FCC协议",
       "fcc_type_telecom": "电信/中兴/烽火 (默认)",
       "fcc_type_huawei": "华为",
-
       "data_source": "数据源",
       "select_source_placeholder": "请选择启用的数据源",
       "agg_rules_placeholder": "可选，按选择顺序执行匹配",
@@ -438,7 +433,6 @@
       "update_ffprobe": "更新 ffprobe",
       "upload_ffprobe": "上传 ffprobe",
       "upload_help": "请上传 ffprobe 可执行文件。上传后系统将自动验证文件有效性。",
-
       "params_section": "检测参数",
       "concurrency": "检测并发数",
       "concurrency_help": "范围 1-30，默认 10",

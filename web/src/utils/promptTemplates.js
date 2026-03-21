@@ -25,7 +25,7 @@ const GROUP_RULES_TEMPLATE = {
    * @returns {string} the full prompt text
    */
   build(channelNames) {
-    const channelList = channelNames.join('\n')
+    const channelList = channelNames.join(', ')
 
     return `You are an IPTV channel management expert. I need you to generate a set of channel grouping rules based on the provided channel name list.
 
@@ -41,6 +41,17 @@ Analyze all the channel names below, categorize them into appropriate groups, an
 4. Each group should contain one or more regex rules to match channel names.
 5. Try to ensure every channel can be matched by at least one group's rules.
 6. Regex patterns should be as concise and accurate as possible.
+
+## Regex Syntax Constraints (CRITICAL)
+
+The regex engine is **Go's regexp package (RE2)**. You MUST follow these rules:
+
+- **DO NOT** use lookahead or lookbehind assertions: \`(?=...)\`, \`(?!...)\`, \`(?<=...)\`, \`(?<!...)\` are NOT supported.
+- **DO NOT** use backreferences: \`\\1\`, \`\\2\`, etc. are NOT supported.
+- **DO NOT** use possessive quantifiers: \`*+\`, \`++\`, \`?+\` are NOT supported.
+- **DO NOT** use atomic groups: \`(?>...)\` is NOT supported.
+- **Allowed syntax**: alternation \`|\`, character classes \`[...]\`, anchors \`^\` and \`$\`, quantifiers \`*\`, \`+\`, \`?\`, \`{n,m}\`, non-capturing groups \`(?:...)\`, and case-insensitive flag \`(?i)\`.
+- Keep patterns simple: prefer plain text matching, alternation (\`A|B|C\`), and basic character classes.
 
 ## Output Format
 
@@ -60,16 +71,7 @@ Return the result strictly in the following JSON format. Do not include any extr
 ## Example
 
 ### Input channel list:
-CCTV1
-CCTV2
-CCTV5
-湖南卫视
-浙江卫视
-北京卫视
-凤凰中文
-凤凰资讯
-CGTN
-东方卫视
+CCTV1, CCTV2, CCTV5, 湖南卫视, 浙江卫视, 北京卫视, 凤凰中文, 凤凰资讯, CGTN, 东方卫视
 
 ### Output:
 \`\`\`json
@@ -135,12 +137,7 @@ export function getPromptTemplate(id) {
  *   [ { group_name: string, rules: [ { target, match_mode, pattern } ] } ]
  */
 export function validateGroupRulesJSON(jsonString) {
-  // Try to extract JSON from markdown code block if present
   let cleanedJson = jsonString.trim()
-  const codeBlockMatch = cleanedJson.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/)
-  if (codeBlockMatch) {
-    cleanedJson = codeBlockMatch[1].trim()
-  }
 
   let parsed
   try {
